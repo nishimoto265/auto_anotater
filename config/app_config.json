@@ -1,0 +1,29 @@
+{
+  "individual_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  "action_ids": ["sit", "stand", "milk", "water", "food"],
+  "colors": {
+    "0": "#FF0000", "1": "#FF8000", "2": "#FFFF00", "3": "#80FF00",
+    "4": "#00FF00", "5": "#00FF80", "6": "#00FFFF", "7": "#0080FF",
+    "8": "#0000FF", "9": "#8000FF", "10": "#FF00FF", "11": "#FF0080",
+    "12": "#FF4040", "13": "#40FF40", "14": "#4040FF", "15": "#FFFF40"
+  },
+  "ui": {
+    "theme": "white_black_modern",
+    "font_size": 10,
+    "frame_display_size": [800, 600],
+    "sidebar_width": 250
+  },
+  "performance": {
+    "cache_size_gb": 20,
+    "preload_frames": 100,
+    "copy_frames_default": 50,
+    "auto_save_interval": 30,
+    "max_memory_usage_gb": 64
+  },
+  "video_processing": {
+    "target_fps": 5,
+    "source_fps": 30,
+    "output_format": "jpg",
+    "output_quality": 95
+  }
+}
