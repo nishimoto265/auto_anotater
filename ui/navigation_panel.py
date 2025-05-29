@@ -7,10 +7,10 @@ class NavigationPanel(QWidget):
     frameChanged = pyqtSignal(int)
     modeChanged = pyqtSignal(str)
     
-    def __init__(self, frame_manager, progress_tracker):
-        super().__init__()
-        self.frame_manager = frame_manager
-        self.progress_tracker = progress_tracker
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.frame_manager = None
+        self.progress_tracker = None
         
         self.initUI()
         self.connectSignals()
@@ -86,14 +86,16 @@ class NavigationPanel(QWidget):
         self.frameChanged.emit(value)
         
     def onPrevChange(self):
-        change_frame = self.frame_manager.get_prev_change_frame()
-        if change_frame is not None:
-            self.frame_counter.setValue(change_frame)
+        if self.frame_manager:
+            change_frame = self.frame_manager.get_prev_change_frame()
+            if change_frame is not None:
+                self.frame_counter.setValue(change_frame)
             
     def onNextChange(self):
-        change_frame = self.frame_manager.get_next_change_frame()
-        if change_frame is not None:
-            self.frame_counter.setValue(change_frame)
+        if self.frame_manager:
+            change_frame = self.frame_manager.get_next_change_frame()
+            if change_frame is not None:
+                self.frame_counter.setValue(change_frame)
             
     def updateProgress(self, progress):
         self.progress_bar.setValue(int(progress * 100))
@@ -108,3 +110,11 @@ class NavigationPanel(QWidget):
         
     def setCurrentFrame(self, frame):
         self.frame_counter.setValue(frame)
+    
+    def go_prev_frame(self):
+        """前のフレームに移動"""
+        self.onPrevFrame()
+    
+    def go_next_frame(self):
+        """次のフレームに移動"""
+        self.onNextFrame()

@@ -131,3 +131,95 @@ def confirm_dialog(parent, message, title="確認"):
                                QMessageBox.StandardButton.Yes | 
                                QMessageBox.StandardButton.No)
     return reply == QMessageBox.StandardButton.Yes
+
+class TrackingParametersDialog(QDialog):
+    def __init__(self, tracking_system, parent=None):
+        super().__init__(parent)
+        self.tracking_system = tracking_system
+        self.setWindowTitle("追跡パラメータ設定")
+        self.setModal(True)
+        
+        layout = QVBoxLayout()
+        
+        # テンプレートサイズ
+        template_layout = QHBoxLayout()
+        template_layout.addWidget(QLabel("テンプレートサイズ:"))
+        self.template_size_spin = QSpinBox()
+        self.template_size_spin.setRange(16, 128)
+        self.template_size_spin.setSingleStep(8)
+        self.template_size_spin.setValue(self.tracking_system.template_size[0])
+        template_layout.addWidget(self.template_size_spin)
+        template_layout.addWidget(QLabel("x"))
+        self.template_size_spin2 = QSpinBox()
+        self.template_size_spin2.setRange(16, 128)
+        self.template_size_spin2.setSingleStep(8)
+        self.template_size_spin2.setValue(self.tracking_system.template_size[1])
+        template_layout.addWidget(self.template_size_spin2)
+        layout.addLayout(template_layout)
+        
+        # 最大ロストフレーム数
+        lost_layout = QHBoxLayout()
+        lost_layout.addWidget(QLabel("最大ロストフレーム数:"))
+        self.max_lost_frames_spin = QSpinBox()
+        self.max_lost_frames_spin.setRange(1, 50)
+        self.max_lost_frames_spin.setValue(self.tracking_system.max_lost_frames)
+        lost_layout.addWidget(self.max_lost_frames_spin)
+        layout.addLayout(lost_layout)
+        
+        # 最小信頼度
+        confidence_layout = QHBoxLayout()
+        confidence_layout.addWidget(QLabel("最小信頼度:"))
+        self.min_confidence_spin = QSpinBox()
+        self.min_confidence_spin.setRange(1, 99)
+        self.min_confidence_spin.setValue(int(self.tracking_system.min_confidence * 100))
+        confidence_layout.addWidget(self.min_confidence_spin)
+        confidence_layout.addWidget(QLabel("%"))
+        layout.addLayout(confidence_layout)
+        
+        # 特徴点パラメータ
+        feature_group = QVBoxLayout()
+        feature_group.addWidget(QLabel("特徴点検出パラメータ:"))
+        
+        corners_layout = QHBoxLayout()
+        corners_layout.addWidget(QLabel("  最大コーナー数:"))
+        self.max_corners_spin = QSpinBox()
+        self.max_corners_spin.setRange(10, 100)
+        self.max_corners_spin.setValue(self.tracking_system.feature_params['maxCorners'])
+        corners_layout.addWidget(self.max_corners_spin)
+        feature_group.addLayout(corners_layout)
+        
+        quality_layout = QHBoxLayout()
+        quality_layout.addWidget(QLabel("  品質レベル:"))
+        self.quality_level_spin = QSpinBox()
+        self.quality_level_spin.setRange(1, 99)
+        self.quality_level_spin.setValue(int(self.tracking_system.feature_params['qualityLevel'] * 100))
+        quality_layout.addWidget(self.quality_level_spin)
+        quality_layout.addWidget(QLabel("%"))
+        feature_group.addLayout(quality_layout)
+        
+        layout.addLayout(feature_group)
+        
+        # ボタン
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton("OK")
+        ok_button.clicked.connect(self.accept)
+        cancel_button = QPushButton("キャンセル")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+    
+    def accept(self):
+        # パラメータを更新
+        self.tracking_system.template_size = (
+            self.template_size_spin.value(),
+            self.template_size_spin2.value()
+        )
+        self.tracking_system.max_lost_frames = self.max_lost_frames_spin.value()
+        self.tracking_system.min_confidence = self.min_confidence_spin.value() / 100.0
+        self.tracking_system.feature_params['maxCorners'] = self.max_corners_spin.value()
+        self.tracking_system.feature_params['qualityLevel'] = self.quality_level_spin.value() / 100.0
+        
+        super().accept()

@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
@@ -16,11 +17,15 @@ class BoundingBox:
     confidence: float
 
 class AnnotationManager:
-    def __init__(self, config_path: str):
-        self.config = self._load_config(config_path)
+    def __init__(self, config_path: str = None):
+        if config_path:
+            self.config = self._load_config(config_path)
+            self.auto_save_interval = self.config["performance"]["auto_save_interval"]
+        else:
+            self.config = {}
+            self.auto_save_interval = 60  # Default to 60 seconds
         self.annotations: Dict[int, List[BoundingBox]] = {}
         self.current_frame = 0
-        self.auto_save_interval = self.config["performance"]["auto_save_interval"]
         self.last_save_time = 0
         self.modified = False
         
