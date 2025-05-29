@@ -1,13 +1,13 @@
 import sys
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                           QMenuBar, QToolBar, QStatusBar, QSplitter)
-from PyQt6.QtCore import Qt, QSize
+                           QMenuBar, QToolBar, QStatusBar, QSplitter, QLabel)
+from PyQt6.QtCore import Qt, QSize, pyqtSlot
 from PyQt6.QtGui import QAction, QIcon
 
-from src.ui.frame_viewer import FrameViewer
-from src.ui.id_panel import IDPanel
-from src.ui.navigation_panel import NavigationPanel
-from src.core.annotation_manager import AnnotationManager
+from ui.frame_viewer import FrameViewer
+from ui.id_panel import IDPanel
+from ui.navigation_panel import NavigationPanel
+from core.annotation_manager import AnnotationManager, SaveStatus
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -15,9 +15,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("オートアノテーションアプリ")
         self.setMinimumSize(1200, 800)
         
-        self.annotation_manager = AnnotationManager()
+        self.annotation_manager = AnnotationManager("config/app_config.json")
+        self.save_status_label = None
         self.init_ui()
         self.setup_shortcuts()
+        self.setup_auto_save()
 
     def init_ui(self):
         # メインウィジェット
@@ -60,6 +62,10 @@ class MainWindow(QMainWindow):
         # ステータスバー
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
+        
+        # 保存ステータスラベル
+        self.save_status_label = QLabel("保存状態: 待機中")
+        self.statusBar.addPermanentWidget(self.save_status_label)
         
         # スタイル設定
         self.setStyleSheet("""
@@ -148,6 +154,45 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.frame_viewer.update_view()
+    
+    def setup_auto_save(self):
+        """自動保存機能のセットアップ"""
+        self.annotation_manager.set_save_status_callback(self.on_save_status_changed)
+        self.annotation_manager.set_save_error_callback(self.on_save_error)
+    
+    @pyqtSlot(SaveStatus)
+    def on_save_status_changed(self, status: SaveStatus):
+        """保存ステータスが変更されたときの処理"""
+        status_text = {
+            SaveStatus.IDLE: "保存状態: 待機中",
+            SaveStatus.SAVING: "保存状態: 保存中...",
+            SaveStatus.SUCCESS: "保存状態: 保存完了",
+            SaveStatus.ERROR: "保存状態: エラー"
+        }
+        
+        self.save_status_label.setText(status_text.get(status, "保存状態: 不明"))
+        
+        # ステータスに応じて色を変更
+        if status == SaveStatus.SAVING:
+            self.save_status_label.setStyleSheet("color: blue;")
+        elif status == SaveStatus.SUCCESS:
+            self.save_status_label.setStyleSheet("color: green;")
+        elif status == SaveStatus.ERROR:
+            self.save_status_label.setStyleSheet("color: red;")
+        else:
+            self.save_status_label.setStyleSheet("")
+    
+    @pyqtSlot(str)
+    def on_save_error(self, error_message: str):
+        """保存エラーが発生したときの処理"""
+        self.statusBar.showMessage(f"保存エラー: {error_message}", 5000)
+    
+    def closeEvent(self, event):
+        """ウィンドウが閉じられるときの処理"""
+        # 自動保存を停止し、最後の保存を実行
+        self.annotation_manager.stop_auto_save()
+        self.annotation_manager.force_save()
+        event.accept()
 
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
