@@ -8,6 +8,7 @@ from src.ui.frame_viewer import FrameViewer
 from src.ui.id_panel import IDPanel
 from src.ui.navigation_panel import NavigationPanel
 from src.core.annotation_manager import AnnotationManager
+from utils.performance_monitor import PerformanceMonitor
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -16,8 +17,11 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1200, 800)
         
         self.annotation_manager = AnnotationManager()
+        self.performance_monitor = PerformanceMonitor()
+        self.performance_monitor.start_monitoring()
         self.init_ui()
         self.setup_shortcuts()
+        self.setup_performance_menu()
 
     def init_ui(self):
         # メインウィジェット
@@ -97,6 +101,13 @@ class MainWindow(QMainWindow):
         view_menu = menubar.addMenu("表示")
         view_menu.addAction("ズームイン")
         view_menu.addAction("ズームアウト")
+        
+        # パフォーマンスメニュー
+        self.performance_menu = menubar.addMenu("パフォーマンス")
+        self.show_metrics_action = self.performance_menu.addAction("メトリクス表示")
+        self.export_report_action = self.performance_menu.addAction("レポートエクスポート")
+        self.performance_menu.addSeparator()
+        self.clear_history_action = self.performance_menu.addAction("履歴クリア")
 
     def create_tool_bar(self):
         toolbar = QToolBar()
@@ -137,14 +148,132 @@ class MainWindow(QMainWindow):
         self.frame_viewer.update()
 
     def prev_frame(self):
-        self.nav_panel.go_prev_frame()
+        current_frame = self.nav_panel.frame_counter.value()
+        self.performance_monitor.start_frame_switch(current_frame)
+        self.nav_panel.onPrevFrame()
+        new_frame = self.nav_panel.frame_counter.value()
+        self.performance_monitor.end_frame_switch(new_frame)
+        self.update_performance_status()
 
     def next_frame(self):
-        self.nav_panel.go_next_frame()
+        current_frame = self.nav_panel.frame_counter.value()
+        self.performance_monitor.start_frame_switch(current_frame)
+        self.nav_panel.onNextFrame()
+        new_frame = self.nav_panel.frame_counter.value()
+        self.performance_monitor.end_frame_switch(new_frame)
+        self.update_performance_status()
 
     def delete_selected_bb(self):
         self.frame_viewer.delete_selected_bb()
 
+    def setup_performance_menu(self):
+        # パフォーマンスメニューのアクション設定
+        self.show_metrics_action.triggered.connect(self.show_performance_metrics)
+        self.export_report_action.triggered.connect(self.export_performance_report)
+        self.clear_history_action.triggered.connect(self.clear_performance_history)
+    
+    def show_performance_metrics(self):
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit
+        summary = self.performance_monitor.get_metrics_summary(300)  # 過去5分間
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("パフォーマンスメトリクス")
+        dialog.resize(600, 400)
+        
+        layout = QVBoxLayout()
+        text_edit = QTextEdit()
+        text_edit.setReadOnly(True)
+        
+        # メトリクスをフォーマット
+        text = "=== パフォーマンスメトリクス (過去5分間) ===\n\n"
+        
+        if summary:
+            # フレーム切り替え時間
+            if summary['frame_switch_times']['avg_ms'] is not None:
+                text += f"フレーム切り替え時間:\n"
+                text += f"  平均: {summary['frame_switch_times']['avg_ms']:.2f}ms\n"
+                text += f"  最大: {summary['frame_switch_times']['max_ms']:.2f}ms\n"
+                text += f"  最小: {summary['frame_switch_times']['min_ms']:.2f}ms\n\n"
+            
+            # メモリ使用量
+            if summary['memory_usage']['current_mb'] is not None:
+                text += f"メモリ使用量:\n"
+                text += f"  現在: {summary['memory_usage']['current_mb']:.2f}MB\n"
+                text += f"  平均: {summary['memory_usage']['avg_mb']:.2f}MB\n"
+                text += f"  最大: {summary['memory_usage']['max_mb']:.2f}MB\n\n"
+            
+            # CPU使用率
+            if summary['cpu_usage']['current_percent'] is not None:
+                text += f"CPU使用率:\n"
+                text += f"  現在: {summary['cpu_usage']['current_percent']:.1f}%\n"
+                text += f"  平均: {summary['cpu_usage']['avg_percent']:.1f}%\n"
+                text += f"  最大: {summary['cpu_usage']['max_percent']:.1f}%\n\n"
+            
+            # GPU使用率
+            if summary['gpu_usage']['current_percent'] is not None:
+                text += f"GPU使用率:\n"
+                text += f"  現在: {summary['gpu_usage']['current_percent']:.1f}%\n"
+                text += f"  平均: {summary['gpu_usage']['avg_percent']:.1f}%\n"
+                text += f"  最大: {summary['gpu_usage']['max_percent']:.1f}%\n"
+        else:
+            text += "データがありません\n"
+        
+        # 最近のアラート
+        alerts = self.performance_monitor.get_alerts()
+        if alerts:
+            text += "\n=== 最近のアラート ===\n"
+            for alert in alerts[-10:]:  # 最新10件
+                from datetime import datetime
+                timestamp = datetime.fromtimestamp(alert.timestamp).strftime('%H:%M:%S')
+                text += f"[{timestamp}] {alert.severity.upper()}: {alert.message}\n"
+        
+        text_edit.setText(text)
+        layout.addWidget(text_edit)
+        dialog.setLayout(layout)
+        dialog.exec()
+    
+    def export_performance_report(self):
+        from PyQt6.QtWidgets import QFileDialog
+        from datetime import datetime
+        
+        default_filename = f"performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "パフォーマンスレポートを保存", default_filename,
+            "JSON Files (*.json);;CSV Files (*.csv)"
+        )
+        
+        if filename:
+            format = 'csv' if filename.endswith('.csv') else 'json'
+            success = self.performance_monitor.export_performance_report(filename, format)
+            if success:
+                self.statusBar.showMessage(f"レポートを保存しました: {filename}", 3000)
+            else:
+                self.statusBar.showMessage("レポートの保存に失敗しました", 3000)
+    
+    def clear_performance_history(self):
+        self.performance_monitor.clear_history()
+        self.statusBar.showMessage("パフォーマンス履歴をクリアしました", 3000)
+    
+    def update_performance_status(self):
+        # ステータスバーに最新のメトリクスを表示
+        metrics = self.performance_monitor.get_current_metrics()
+        if metrics:
+            status_text = []
+            if metrics.frame_switch_time is not None:
+                status_text.append(f"切替: {metrics.frame_switch_time*1000:.1f}ms")
+            if metrics.process_memory_mb is not None:
+                status_text.append(f"メモリ: {metrics.process_memory_mb:.1f}MB")
+            if metrics.cpu_percent is not None:
+                status_text.append(f"CPU: {metrics.cpu_percent:.1f}%")
+            
+            if status_text:
+                self.statusBar.showMessage(" | ".join(status_text), 5000)
+    
+    def closeEvent(self, event):
+        # アプリケーション終了時にモニタリングを停止
+        self.performance_monitor.stop_monitoring()
+        super().closeEvent(event)
+    
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.frame_viewer.update_view()
