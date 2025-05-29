@@ -1,13 +1,14 @@
 import sys
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                           QMenuBar, QToolBar, QStatusBar, QSplitter)
-from PyQt6.QtCore import Qt, QSize
+                           QMenuBar, QToolBar, QStatusBar, QSplitter, QLabel)
+from PyQt6.QtCore import Qt, QSize, QTimer
 from PyQt6.QtGui import QAction, QIcon
 
 from src.ui.frame_viewer import FrameViewer
 from src.ui.id_panel import IdPanel
 from src.ui.navigation_panel import NavigationPanel
 from src.core.annotation_manager import AnnotationManager
+from src.core.image_cache import ImageCache
 from src.utils.color_manager import ColorManager
 
 class MainWindow(QMainWindow):
@@ -25,10 +26,20 @@ class MainWindow(QMainWindow):
         config_path = 'config/app_config.json'  # デフォルトパス
         if self.config_manager:
             config_path = self.config_manager.config_path
+            
+        # Initialize image cache with configuration
+        cache_size_gb = 20.0
+        max_memory_gb = 64.0
+        if self.config_manager:
+            cache_size_gb = self.config_manager.get_setting('performance.cache_size_gb', 20)
+            max_memory_gb = self.config_manager.get_setting('performance.max_memory_usage_gb', 64)
+            
+        self.image_cache = ImageCache(max_cache_size_gb=cache_size_gb, max_memory_gb=max_memory_gb)
         
         self.annotation_manager = AnnotationManager(config_path)
         self.init_ui()
         self.setup_shortcuts()
+        self.setup_memory_monitor()
 
     def init_ui(self):
         # メインウィジェット
@@ -47,7 +58,7 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         
         # フレームビューア
-        self.frame_viewer = FrameViewer()
+        self.frame_viewer = FrameViewer(image_cache=self.image_cache)
         splitter.addWidget(self.frame_viewer)
         
         # 右サイドパネル
@@ -71,6 +82,15 @@ class MainWindow(QMainWindow):
         # ステータスバー
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
+        
+        # メモリ使用状況表示用ラベル
+        self.memory_label = QLabel("メモリ: 0.0GB / 0.0GB")
+        self.cache_label = QLabel("キャッシュ: 0フレーム")
+        self.hit_ratio_label = QLabel("ヒット率: 0.0%")
+        
+        self.statusBar.addPermanentWidget(self.memory_label)
+        self.statusBar.addPermanentWidget(self.cache_label)
+        self.statusBar.addPermanentWidget(self.hit_ratio_label)
         
         # スタイル設定
         self.setStyleSheet("""
@@ -155,6 +175,37 @@ class MainWindow(QMainWindow):
 
     def delete_selected_bb(self):
         self.frame_viewer.delete_selected_bb()
+
+    def setup_memory_monitor(self):
+        """メモリ監視タイマーをセットアップ"""
+        self.memory_timer = QTimer()
+        self.memory_timer.timeout.connect(self.update_memory_status)
+        self.memory_timer.start(1000)  # 1秒ごとに更新
+        
+    def update_memory_status(self):
+        """メモリ使用状況をステータスバーに更新"""
+        stats = self.image_cache.get_memory_stats()
+        
+        # メモリ使用状況
+        memory_text = f"メモリ: {stats['total_used_gb']:.1f}GB / {stats['max_memory_gb']:.1f}GB"
+        self.memory_label.setText(memory_text)
+        
+        # キャッシュ状況
+        cache_text = f"キャッシュ: {stats['cache_frames']}フレーム ({stats['cache_size_gb']:.1f}GB / {stats['max_cache_gb']:.1f}GB)"
+        self.cache_label.setText(cache_text)
+        
+        # ヒット率
+        hit_ratio = stats['hit_ratio'] * 100
+        hit_text = f"ヒット率: {hit_ratio:.1f}%"
+        self.hit_ratio_label.setText(hit_text)
+        
+    def closeEvent(self, event):
+        """ウィンドウ終了時の処理"""
+        if hasattr(self, 'memory_timer'):
+            self.memory_timer.stop()
+        if hasattr(self, 'image_cache'):
+            self.image_cache.stop()
+        super().closeEvent(event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

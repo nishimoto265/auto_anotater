@@ -8,9 +8,9 @@ from src.core.bbox_manager import BBoxManager
 from src.utils.coordinate_converter import CoordinateConverter
 
 class FrameViewer(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, image_cache=None):
         super().__init__(parent)
-        self.image_cache = ImageCache()
+        self.image_cache = image_cache if image_cache else ImageCache()
         self.bbox_manager = BBoxManager(800, 600)
         self.coord_converter = CoordinateConverter(800, 600)
         

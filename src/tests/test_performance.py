@@ -7,12 +7,10 @@ from memory_profiler import profile
 from line_profiler import LineProfiler
 
 from src.core.image_cache import ImageCache
-from src.utils.memory_manager import MemoryManager
 
 class PerformanceTest(unittest.TestCase):
     def setUp(self):
         self.image_cache = ImageCache()
-        self.memory_manager = MemoryManager()
         self.test_frames = self._generate_test_frames()
         self.test_bboxes = self._generate_test_bboxes()
         
