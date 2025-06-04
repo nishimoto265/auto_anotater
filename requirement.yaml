@@ -1,0 +1,331 @@
+# requirement.yaml - Phase 1: システム要件定義書
+# 高速オートアノテーションシステム（Fast Auto-Annotation System）
+
+project_info:
+  name: "Fast Auto-Annotation System"
+  purpose: "個人用動物行動解析向け半自動アノテーションツール"
+  target_user: "個人研究者・動物行動研究者"
+  development_method: "Claude Agent 8並列開発"
+  total_development_days: 5-7
+  critical_success_factor: "フレーム切り替え50ms以下絶対達成"
+
+system_requirements:
+  functional:
+    video_processing:
+      - "4K動画（mp4/avi）読み込み対応"
+      - "30fps → 5fps自動変換・フレーム出力"
+      - "フレーム番号付きjpg保存（000000.jpg〜999999.jpg）"
+      
+    annotation:
+      - "マウスドラッグによるBBドラッグ作成"
+      - "16個体ID管理（0-15、色分け表示）"
+      - "5行動カテゴリ（sit/stand/milk/water/food）"
+      - "YOLO形式txtファイル自動保存"
+      - "座標系変換（ピクセル ↔ YOLO正規化座標）"
+      
+    user_interface:
+      - "PyQt6デスクトップアプリケーション"
+      - "70%:30%レイアウト（左：動画表示、右：操作パネル）"
+      - "ショートカットキー対応（A/D:フレーム切り替え、W:BB作成、S:BB削除）"
+      - "ズーム・パン機能"
+      - "BB一覧表示・選択・編集"
+      
+    tracking:
+      - "IOU閾値ベース簡易追跡"
+      - "フレーム間ID自動継承・手動補正"
+      - "追跡断絶検知・アラート"
+      
+    data_management:
+      - "プロジェクト単位管理"
+      - "自動保存（フレーム切り替え時）"
+      - "バックアップ・復旧機能"
+      - "複数フォーマット出力（YOLO/COCO/CSV）"
+
+  performance:
+    critical_targets:
+      frame_switching: "50ms以下（絶対達成）"
+      cache_hit_rate: "95%以上"
+      memory_usage: "20GB上限（64GBの1/3活用）"
+      continuous_operation: "4時間以上安定動作"
+      
+    agent_specific_targets:
+      agent1_presentation:
+        bb_rendering: "16ms以下"
+        keyboard_response: "1ms以下"
+        mouse_response: "5ms以下"
+        zoom_operation: "100ms以下"
+        
+      agent2_application:
+        business_logic: "10ms以下"
+        workflow_control: "5ms以下"
+        validation: "1ms以下"
+        
+      agent3_domain:
+        iou_calculation: "1ms以下"
+        coordinate_transform: "0.5ms以下"
+        entity_operation: "1ms以下"
+        
+      agent4_infrastructure:
+        video_loading: "実速度（1秒動画/1秒処理）"
+        frame_conversion: "30fps→5fps リアルタイム"
+        image_processing: "4K→表示サイズ 50ms以下"
+        
+      agent5_data_bus:
+        event_dispatch: "1ms以下"
+        message_transfer: "1ms以下"
+        communication_overhead: "全体の5%以下"
+        
+      agent6_cache_layer:
+        frame_switching: "50ms以下（最重要）"
+        cache_hit_rate: "95%以上"
+        memory_management: "20GB上限制御"
+        preload_efficiency: "前後100フレーム先読み"
+        
+      agent7_persistence:
+        file_save: "100ms以下"
+        auto_save: "非同期・フレーム切り替え毎"
+        backup: "5分毎・非同期"
+        
+      agent8_monitoring:
+        metrics_collection: "10ms以下"
+        log_recording: "5ms以下"
+        monitoring_overhead: "全体の2%以下"
+
+  technical:
+    technology_stack:
+      language: "Python 3.8+"
+      gui_framework: "PyQt6"
+      image_processing: "OpenCV"
+      numerical_computation: "NumPy"
+      caching: "LRU Cache"
+      testing: "pytest"
+      
+    architecture:
+      pattern: "Layered Architecture"
+      communication: "Event-driven + Message Queue"
+      development: "Agent並列開発"
+      testing: "TDD (Test-Driven Development)"
+      
+    constraints:
+      prohibited:
+        - "React/Web技術（デスクトップアプリのみ）"
+        - "動画再生機能（静的フレーム表示のみ）"
+        - "Agent責任範囲外実装（レイヤー越境禁止）"
+        - "フレーム切り替え50ms目標妥協"
+        - "16個体上限・座標系・ファイル形式独断変更"
+        
+      mandatory:
+        - "PyQt6 GUI framework使用"
+        - "YOLO形式データ出力"
+        - "フレーム切り替え50ms以下達成"
+        - "TDD開発手法"
+        - "Agent間Data Bus通信"
+
+agent_specifications:
+  agent1_presentation:
+    responsibility: "PyQt6 UI・ユーザー操作・描画"
+    components:
+      - "main_window: メインウィンドウ・レイアウト管理"
+      - "bb_canvas: BB描画・マウスドラッグ・ズーム・パン"
+      - "control_panels: ID選択・行動選択・BB一覧・ファイル一覧"
+      - "shortcuts: A/D/W/S/Ctrl+Z等ショートカット処理"
+    interfaces:
+      - "Application層サービス呼び出し"
+      - "Data Bus経由イベント受信"
+      
+  agent2_application:
+    responsibility: "ワークフロー制御・ビジネスロジック統合"
+    components:
+      - "services: BB作成・編集・削除統合処理"
+      - "controllers: フレーム・BB・ナビゲーション制御"
+      - "validators: BB・座標検証"
+    interfaces:
+      - "Domain層エンティティ操作"
+      - "Data Bus経由他層通信"
+      
+  agent3_domain:
+    responsibility: "ビジネスオブジェクト・ルール・アルゴリズム"
+    components:
+      - "entities: BB・フレーム・プロジェクト・ID・行動エンティティ"
+      - "value_objects: 座標・信頼度・色マッピング"
+      - "algorithms: IOU計算・座標変換・追跡アルゴリズム"
+    interfaces:
+      - "他層依存なし（純粋ドメインロジック）"
+      
+  agent4_infrastructure:
+    responsibility: "外部リソース・技術基盤"
+    components:
+      - "video: OpenCV動画読み込み・フレーム変換"
+      - "image: 4K画像処理・リサイズ・フォーマット変換"
+      - "system: マルチスレッド・ファイルシステム・メモリ管理"
+    interfaces:
+      - "Cache層経由・Data Bus通信"
+      
+  agent5_data_bus:
+    responsibility: "Agent間通信・メッセージング・統合"
+    components:
+      - "event_bus: 非同期イベント配信"
+      - "message_queue: Agent間データ転送・優先度制御"
+      - "interfaces: API仕様管理・通信プロトコル統一"
+    interfaces:
+      - "全Agent間通信ハブ"
+      
+  agent6_cache_layer:
+    responsibility: "高速アクセス・パフォーマンス最適化（最重要）"
+    components:
+      - "frame_cache: 前後100フレーム先読みLRUキャッシュ"
+      - "image_cache: 表示用1/2サイズ画像キャッシュ"
+      - "strategies: バックグラウンド先読み・予測読み込み"
+      - "monitoring: 64GB活用・20GB上限メモリ管理"
+    interfaces:
+      - "Infrastructure層・Data Bus経由"
+    critical_success: "フレーム切り替え50ms以下絶対達成"
+    
+  agent7_persistence:
+    responsibility: "データ保存・ファイル管理・永続化"
+    components:
+      - "file_io: YOLO形式txtファイル読み書き・座標変換"
+      - "project: プロジェクト管理・JSON設定・自動保存"
+      - "backup: バックアップ・復旧・ディレクトリ監視"
+    interfaces:
+      - "Domain層エンティティ永続化"
+      
+  agent8_monitoring:
+    responsibility: "パフォーマンス監視・ログ・デバッグ"
+    components:
+      - "performance: フレーム切り替え時間測定・50ms監視"
+      - "health: メモリ使用量監視・リーク検知"
+      - "debugging: エラー発生監視・ログ記録"
+    interfaces:
+      - "全層からメトリクス収集"
+
+data_specifications:
+  annotation_file_format:
+    filename_pattern: "000000.txt, 000001.txt, ..."
+    encoding: "UTF-8"
+    line_ending: "LF (Unix)"
+    format: "個体ID YOLO_X YOLO_Y YOLO_W YOLO_H 行動ID 信頼度"
+    example: |
+      0 0.5123 0.3456 0.1234 0.0987 2 0.9512
+      1 0.2345 0.7890 0.0876 0.1234 0 0.8743
+    validation_rules:
+      individual_id: "0-15 (integer)"
+      yolo_coordinates: "0.0-1.0 (4 decimal places)"
+      action_id: "0-4 (sit=0, stand=1, milk=2, water=3, food=4)"
+      confidence: "0.0-1.0 (4 decimal places)"
+      
+  project_config_format:
+    filename: "project.json"
+    encoding: "UTF-8"
+    structure:
+      project_info: "name, version, created, video_source, etc."
+      annotation_config: "individual_ids, action_ids, colors"
+      tracking_config: "iou_threshold, copy_frames, algorithm"
+      performance_config: "cache_size, memory_limit, threads"
+      ui_config: "window_size, layout_split, shortcuts"
+      
+  directory_structure:
+    videos: "入力動画（mp4/avi）"
+    frames: "変換済み5fpsフレーム（jpg）"
+    annotations: "アノテーションファイル（txt）"
+    cache: "キャッシュディレクトリ（display/thumbnails）"
+    config: "設定・モデル管理"
+    backup: "自動バックアップ"
+    logs: "パフォーマンス・エラー・デバッグログ"
+
+e2e_test_scenarios:
+  scenario1_video_to_annotation:
+    description: "動画からアノテーション作成の完全フロー"
+    steps:
+      - "mp4動画読み込み成功"
+      - "30fps→5fps変換成功"
+      - "フレーム表示50ms以下"
+      - "BBドラッグ作成成功"
+      - "ID・行動選択成功"
+      - "txtファイル保存成功"
+    success_criteria:
+      - "全ステップ正常完了"
+      - "フレーム切り替え50ms以下維持"
+      - "データ整合性100%"
+      
+  scenario2_frame_switching_performance:
+    description: "フレーム切り替え性能確認"
+    steps:
+      - "A/Dキーでフレーム切り替え"
+      - "各切り替え50ms以下測定"
+      - "1000回連続切り替えテスト"
+      - "メモリ使用量安定確認"
+    success_criteria:
+      - "100%のフレーム切り替えが50ms以下"
+      - "メモリリーク無し"
+      - "連続動作安定性確認"
+      
+  scenario3_tracking_function:
+    description: "追跡機能確認"
+    steps:
+      - "BB作成・ID付与"
+      - "次フレーム移動"
+      - "IOU追跡・ID継承確認"
+      - "追跡断絶・手動補正確認"
+    success_criteria:
+      - "IOU追跡正確性95%以上"
+      - "ID継承正常動作"
+      - "手動補正機能正常"
+      
+  scenario4_long_term_operation:
+    description: "長時間動作安定性確認"
+    steps:
+      - "4時間連続動作確認"
+      - "メモリリーク無し確認"
+      - "パフォーマンス劣化無し確認"
+      - "自動保存・復旧確認"
+    success_criteria:
+      - "4時間安定動作"
+      - "メモリ使用量20GB以下維持"
+      - "フレーム切り替え50ms以下維持"
+      - "データ損失ゼロ"
+
+integration_strategy:
+  phase_based_integration:
+    phase1_foundation:
+      duration: "2時間"
+      components: ["Data Bus", "Cache"]
+      validation: "基本通信・キャッシュ動作確認"
+      
+    phase2_core:
+      duration: "3時間"
+      components: ["Domain", "Application", "Infrastructure"]
+      validation: "ビジネスロジック・技術基盤連携確認"
+      
+    phase3_complete:
+      duration: "3時間"
+      components: ["全8Agent統合"]
+      validation: "E2Eテスト・フレーム切り替え50ms確認"
+      
+  quality_gates:
+    unit_test: "各Agent単体テスト100%通過"
+    integration_test: "Agent間通信テスト100%通過"
+    performance_test: "パフォーマンス目標100%達成"
+    e2e_test: "E2Eシナリオ100%成功"
+    
+  success_criteria:
+    functional: "全機能正常動作"
+    performance: "フレーム切り替え50ms以下絶対達成"
+    quality: "テスト100%通過"
+    stability: "4時間連続動作安定性"
+    usability: "ユーザー操作性良好"
+
+development_schedule:
+  total_duration: "5-7日"
+  phase1: "1日 - システム要件定義"
+  phase2: "1日 - Agent別仕様定義（8並列）"
+  phase3: "1日 - Agent詳細設計（8並列）"
+  phase4: "2-4日 - Agent並列実装（8並列）"
+  phase5: "1日 - 統合・テスト"
+  
+deliverables:
+  source_code: "src/ 8Agent完全実装コード"
+  test_code: "tests/ 単体・統合・E2Eテスト"
+  configuration: "config/ 設定ファイル・インターフェース定義"
+  documentation: "README.md, AGENT_GUIDE.md, PERFORMANCE.md"
+  performance_data: "フレーム切り替え50ms達成証明データ"

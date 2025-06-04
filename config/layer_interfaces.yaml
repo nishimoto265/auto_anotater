@@ -1,0 +1,370 @@
+# layer_interfaces.yaml - Agent間インターフェース仕様
+# 8並列Agent開発用の統一通信プロトコル
+
+interfaces:
+  presentation_to_application:
+    create_bb:
+      description: "BBドラッグ作成要求"
+      input:
+        - "float x: 開始X座標（ピクセル）"
+        - "float y: 開始Y座標（ピクセル）"
+        - "float w: 幅（ピクセル）"
+        - "float h: 高さ（ピクセル）"
+        - "int id: 個体ID（0-15）"
+        - "int action: 行動ID（0-4）"
+      output:
+        - "bool success: 作成成功フラグ"
+        - "str error_message: エラーメッセージ"
+      timeout: "10ms"
+      
+    delete_bb:
+      description: "BB削除要求"
+      input:
+        - "int bb_id: BBの一意ID"
+      output:
+        - "bool success: 削除成功フラグ"
+      timeout: "5ms"
+      
+    frame_change:
+      description: "フレーム切り替え要求"
+      input:
+        - "str frame_id: 切り替え先フレームID"
+      output:
+        - "bool success: 切り替え成功フラグ"
+        - "str error_message: エラーメッセージ"
+      timeout: "50ms"
+      
+    zoom_canvas:
+      description: "キャンバスズーム要求"
+      input:
+        - "float zoom_factor: ズーム倍率"
+        - "float center_x: ズーム中心X"
+        - "float center_y: ズーム中心Y"
+      output:
+        - "bool success: ズーム成功フラグ"
+      timeout: "100ms"
+      
+  application_to_domain:
+    validate_bb:
+      description: "BB検証"
+      input:
+        - "BBEntity bb: 検証対象BB"
+      output:
+        - "bool valid: 検証結果"
+        - "list errors: エラーリスト"
+      timeout: "3ms"
+      
+    calculate_iou:
+      description: "IOU計算"
+      input:
+        - "BBEntity bb1: BB1"
+        - "BBEntity bb2: BB2"
+      output:
+        - "float iou_score: IOU値（0.0-1.0）"
+      timeout: "1ms"
+      
+    transform_coordinates:
+      description: "座標変換"
+      input:
+        - "Coordinates coords: 座標"
+        - "str from_format: 変換元形式（pixel/yolo）"
+        - "str to_format: 変換先形式"
+        - "int image_width: 画像幅"
+        - "int image_height: 画像高さ"
+      output:
+        - "Coordinates transformed: 変換後座標"
+      timeout: "0.5ms"
+      
+    track_objects:
+      description: "オブジェクト追跡"
+      input:
+        - "list previous_bbs: 前フレームBBリスト"
+        - "list current_bbs: 現フレームBBリスト"
+        - "float iou_threshold: IOU閾値"
+      output:
+        - "list tracking_results: 追跡結果"
+      timeout: "5ms"
+      
+  cache_to_infrastructure:
+    load_frame:
+      description: "フレーム読み込み"
+      input:
+        - "str frame_id: フレームID"
+      output:
+        - "Image frame_data: フレーム画像データ"
+      timeout: "45ms"
+      
+    preload_frames:
+      description: "フレーム先読み"
+      input:
+        - "list frame_ids: 先読みフレームIDリスト"
+      output:
+        - "bool started: 先読み開始フラグ"
+      timeout: "1ms"
+      
+    convert_video:
+      description: "動画変換"
+      input:
+        - "str video_path: 動画ファイルパス"
+        - "str output_dir: 出力ディレクトリ"
+        - "int target_fps: 目標FPS"
+      output:
+        - "bool success: 変換成功フラグ"
+        - "int frame_count: 生成フレーム数"
+      timeout: "実速度"
+      
+    process_image:
+      description: "画像処理"
+      input:
+        - "Image source: 元画像"
+        - "str operation: 処理種別（resize/format_convert）"
+        - "dict params: 処理パラメータ"
+      output:
+        - "Image processed: 処理後画像"
+      timeout: "50ms"
+      
+  persistence_to_domain:
+    save_annotations:
+      description: "アノテーション保存"
+      input:
+        - "str frame_id: フレームID"
+        - "list bb_entities: BBエンティティリスト"
+      output:
+        - "bool success: 保存成功フラグ"
+      timeout: "100ms"
+      
+    load_annotations:
+      description: "アノテーション読み込み"
+      input:
+        - "str frame_id: フレームID"
+      output:
+        - "list bb_entities: BBエンティティリスト"
+      timeout: "50ms"
+      
+    save_project:
+      description: "プロジェクト設定保存"
+      input:
+        - "ProjectEntity project: プロジェクトエンティティ"
+      output:
+        - "bool success: 保存成功フラグ"
+      timeout: "30ms"
+      
+    backup_data:
+      description: "データバックアップ"
+      input:
+        - "str backup_type: バックアップ種別"
+      output:
+        - "bool success: バックアップ成功フラグ"
+        - "str backup_path: バックアップパス"
+      timeout: "非同期"
+
+data_bus_events:
+  frame_changed:
+    description: "フレーム切り替え通知"
+    data:
+      - "str current_frame_id: 現在フレームID"
+      - "str previous_frame_id: 前フレームID"
+      - "float switch_time: 切り替え時間（ms）"
+    subscribers:
+      - "cache_layer: 次フレーム先読み開始"
+      - "persistence: 前フレーム自動保存"
+      - "monitoring: 切り替え時間記録"
+    max_delay: "1ms"
+    
+  bb_created:
+    description: "BB作成通知"
+    data:
+      - "BBEntity bb: 作成されたBB"
+      - "str frame_id: フレームID"
+      - "timestamp created_at: 作成時刻"
+    subscribers:
+      - "presentation: BB一覧更新・再描画"
+      - "persistence: 自動保存"
+    max_delay: "1ms"
+    
+  bb_updated:
+    description: "BB更新通知"
+    data:
+      - "BBEntity bb: 更新後BB"
+      - "BBEntity previous_bb: 更新前BB"
+      - "str frame_id: フレームID"
+    subscribers:
+      - "presentation: BB再描画"
+      - "persistence: 自動保存"
+    max_delay: "1ms"
+    
+  bb_deleted:
+    description: "BB削除通知"
+    data:
+      - "int bb_id: 削除されたBB ID"
+      - "str frame_id: フレームID"
+    subscribers:
+      - "presentation: BB一覧更新・再描画"
+      - "persistence: 自動保存"
+    max_delay: "1ms"
+    
+  tracking_started:
+    description: "追跡処理開始通知"
+    data:
+      - "str frame_id: 追跡開始フレームID"
+      - "list target_ids: 追跡対象IDリスト"
+    subscribers:
+      - "presentation: 追跡状態表示"
+      - "monitoring: 追跡時間測定開始"
+    max_delay: "1ms"
+    
+  tracking_completed:
+    description: "追跡処理完了通知"
+    data:
+      - "str start_frame_id: 開始フレームID"
+      - "str end_frame_id: 終了フレームID"
+      - "list tracking_results: 追跡結果"
+      - "float processing_time: 処理時間（ms）"
+    subscribers:
+      - "presentation: 追跡結果表示"
+      - "persistence: 複数フレーム一括保存"
+      - "monitoring: 追跡時間記録"
+    max_delay: "1ms"
+    
+  performance_warning:
+    description: "パフォーマンス警告"
+    data:
+      - "str metric_name: メトリクス名"
+      - "float value: 測定値"
+      - "float threshold: 閾値"
+      - "str severity: 重要度（info/warning/error）"
+    subscribers:
+      - "monitoring: 警告ログ記録"
+      - "cache_layer: 最適化実行"
+    max_delay: "1ms"
+    
+  cache_hit:
+    description: "キャッシュヒット通知"
+    data:
+      - "str frame_id: フレームID"
+      - "float access_time: アクセス時間（ms）"
+    subscribers:
+      - "monitoring: ヒット率統計更新"
+    max_delay: "1ms"
+    
+  cache_miss:
+    description: "キャッシュミス通知"
+    data:
+      - "str frame_id: フレームID"
+      - "float load_time: 読み込み時間（ms）"
+    subscribers:
+      - "monitoring: ミス率統計更新"
+      - "cache_layer: 先読み戦略調整"
+    max_delay: "1ms"
+    
+  memory_usage:
+    description: "メモリ使用量通知"
+    data:
+      - "float current_usage: 現在使用量（GB）"
+      - "float limit: 上限（GB）"
+      - "float usage_ratio: 使用率（0.0-1.0）"
+    subscribers:
+      - "monitoring: メモリ統計更新"
+      - "cache_layer: キャッシュ削除実行"
+    max_delay: "1ms"
+    
+  error_occurred:
+    description: "エラー発生通知"
+    data:
+      - "str error_type: エラー種別"
+      - "str error_message: エラーメッセージ"
+      - "str source_agent: 発生元Agent"
+      - "dict context: エラーコンテキスト"
+    subscribers:
+      - "monitoring: エラーログ記録"
+      - "presentation: エラー表示"
+    max_delay: "1ms"
+
+communication_protocols:
+  synchronous_call:
+    description: "同期関数呼び出し（直接通信）"
+    use_cases:
+      - "フレーム切り替え（50ms以内応答必須）"
+      - "BB作成・削除（即座応答必要）"
+      - "座標変換（計算結果即座必要）"
+    implementation: "LayerInterface.call_service()"
+    timeout_handling: "タイムアウト時例外発生"
+    
+  asynchronous_event:
+    description: "非同期イベント通知（Event Bus）"
+    use_cases:
+      - "BB作成・更新・削除通知"
+      - "フレーム切り替え通知"
+      - "パフォーマンス統計通知"
+    implementation: "EventBus.publish() / subscribe()"
+    delivery_guarantee: "best effort（1ms以内配信）"
+    
+  shared_memory:
+    description: "共有メモリ通信（大容量データ）"
+    use_cases:
+      - "フレーム画像データ転送"
+      - "キャッシュデータ共有"
+    implementation: "SharedMemoryManager"
+    performance: "ゼロコピー・50ms以下"
+
+error_handling:
+  timeout_errors:
+    frame_switching_timeout:
+      condition: "フレーム切り替え50ms超過"
+      action: "エラー表示・前フレーム維持"
+      recovery: "Cache Agent最適化実行"
+      
+    bb_operation_timeout:
+      condition: "BB操作10ms超過"
+      action: "操作キャンセル・エラー表示"
+      recovery: "再試行・データ整合性確認"
+      
+  communication_errors:
+    agent_disconnection:
+      condition: "Agent応答なし"
+      action: "該当Agent再起動試行"
+      recovery: "部分機能制限・継続動作"
+      
+    data_corruption:
+      condition: "データ整合性エラー"
+      action: "バックアップからの復旧"
+      recovery: "データ検証・修復"
+      
+  performance_degradation:
+    memory_exhaustion:
+      condition: "メモリ使用量20GB超過"
+      action: "Cache削除・ガベージコレクション"
+      recovery: "メモリ最適化・動作継続"
+      
+    cache_hit_rate_low:
+      condition: "キャッシュヒット率95%未満"
+      action: "先読み戦略調整"
+      recovery: "Cache Agent最適化実行"
+
+performance_monitoring:
+  critical_metrics:
+    frame_switching_time:
+      target: "50ms以下"
+      measurement: "フレーム切り替え開始〜完了"
+      alarm_threshold: "45ms"
+      
+    cache_hit_rate:
+      target: "95%以上"
+      measurement: "ヒット数/総アクセス数"
+      alarm_threshold: "90%"
+      
+    memory_usage:
+      target: "20GB以下"
+      measurement: "RSS（実使用メモリ）"
+      alarm_threshold: "18GB"
+      
+    bb_rendering_time:
+      target: "16ms以下"
+      measurement: "BB描画開始〜完了"
+      alarm_threshold: "14ms"
+      
+  monitoring_intervals:
+    real_time: "フレーム切り替え・BB操作"
+    periodic_1s: "メモリ使用量・キャッシュ統計"
+    periodic_10s: "システム健全性・エラー率"
+    periodic_60s: "パフォーマンス統計・レポート"

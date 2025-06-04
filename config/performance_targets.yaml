@@ -1,0 +1,410 @@
+# performance_targets.yaml - Agent別パフォーマンス目標
+# フレーム切り替え50ms以下絶対達成のための詳細性能基準
+
+critical_targets:
+  frame_switching:
+    target: "50ms以下"
+    priority: "最重要（絶対達成）"
+    measurement: "A/Dキー押下〜画面更新完了"
+    breakdown:
+      key_detection: "1ms以下"
+      cache_access: "30ms以下"
+      image_display: "10ms以下"
+      ui_update: "5ms以下"
+      overhead: "4ms以下"
+    test_method: "1000回連続切り替えテスト"
+    success_criteria: "100%が50ms以下"
+    
+  cache_performance:
+    hit_rate: "95%以上"
+    memory_limit: "20GB"
+    preload_range: "前後100フレーム"
+    lru_efficiency: "メモリ断片化5%以下"
+    
+  continuous_operation:
+    duration: "4時間以上"
+    memory_leak: "0%（増加なし）"
+    performance_degradation: "5%以下"
+
+agent_specific_targets:
+  agent1_presentation:
+    description: "PyQt6 UI・ユーザー操作・描画専門"
+    critical_metrics:
+      bb_rendering:
+        target: "16ms以下"
+        measurement: "BB描画処理時間"
+        breakdown:
+          bb_rect_drawing: "8ms以下"
+          color_mapping: "3ms以下"
+          overlay_composition: "3ms以下"
+          screen_update: "2ms以下"
+        optimization:
+          - "OpenGL活用によるGPU描画"
+          - "差分描画（dirty rectangle）"
+          - "BBオブジェクトプール活用"
+          
+      keyboard_response:
+        target: "1ms以下"
+        measurement: "キー押下〜処理開始"
+        test_keys: ["A", "D", "W", "S", "Ctrl+Z"]
+        optimization:
+          - "Qt keyboard event最適化"
+          - "ショートカットハンドラー軽量化"
+          
+      mouse_response:
+        target: "5ms以下"
+        measurement: "マウス操作〜BB作成開始"
+        operations: ["ドラッグ開始", "ドラッグ中", "ドラッグ終了"]
+        optimization:
+          - "マウストラッキング最適化"
+          - "リアルタイムBB描画"
+          
+      zoom_operation:
+        target: "100ms以下"
+        measurement: "ズーム操作〜画面更新完了"
+        zoom_levels: ["0.25x", "0.5x", "1.0x", "2.0x", "4.0x"]
+        
+      panel_update:
+        target: "10ms以下"
+        measurement: "パネル内容更新時間"
+        panels: ["ID選択", "行動選択", "BB一覧", "ファイル一覧"]
+        
+  agent2_application:
+    description: "ワークフロー制御・ビジネスロジック統合専門"
+    critical_metrics:
+      business_logic:
+        target: "10ms以下"
+        measurement: "ビジネスロジック処理時間"
+        breakdown:
+          bb_validation: "3ms以下"
+          id_assignment: "2ms以下"
+          tracking_control: "3ms以下"
+          state_update: "2ms以下"
+        optimization:
+          - "検証ロジック最適化"
+          - "状態管理軽量化"
+          
+      workflow_control:
+        target: "5ms以下"
+        measurement: "ワークフロー制御時間"
+        workflows: ["BB作成フロー", "追跡フロー", "保存フロー"]
+        
+      operation_validation:
+        target: "1ms以下"
+        measurement: "操作検証時間"
+        validations: ["座標範囲", "ID重複", "行動整合性"]
+        
+  agent3_domain:
+    description: "BBエンティティ・IOU計算・ビジネスルール専門"
+    critical_metrics:
+      iou_calculation:
+        target: "1ms以下"
+        measurement: "IOU計算処理時間"
+        test_cases: "1000ペアBB計算"
+        optimization:
+          - "NumPy vectorized計算"
+          - "事前計算キャッシュ"
+          
+      coordinate_transform:
+        target: "0.5ms以下"
+        measurement: "座標変換処理時間"
+        transforms: ["pixel→yolo", "yolo→pixel"]
+        batch_size: "100BB一括変換"
+        
+      entity_operation:
+        target: "1ms以下"
+        measurement: "エンティティ操作時間"
+        operations: ["作成", "更新", "削除", "検索"]
+        
+      business_rules:
+        target: "2ms以下"
+        measurement: "ビジネスルール適用時間"
+        rules: ["ID範囲チェック", "BB重複チェック", "追跡ルール"]
+        
+  agent4_infrastructure:
+    description: "OpenCV動画処理・フレーム変換専門"
+    critical_metrics:
+      video_loading:
+        target: "実速度（1秒動画/1秒処理）"
+        measurement: "動画読み込み・変換時間"
+        formats: ["mp4", "avi"]
+        resolutions: ["4K", "1080p"]
+        
+      frame_conversion:
+        target: "30fps→5fps リアルタイム"
+        measurement: "フレーム変換処理時間"
+        output_format: "jpg"
+        quality: "90%"
+        
+      image_processing:
+        target: "4K→表示サイズ 50ms以下"
+        measurement: "画像リサイズ処理時間"
+        sizes: ["1920x1080", "1280x720", "640x360"]
+        optimization:
+          - "OpenCV最適化フラグ"
+          - "マルチスレッド処理"
+          
+      file_io:
+        target: "SSD活用・並列処理"
+        measurement: "ファイル読み書き時間"
+        operations: ["jpg読み込み", "jpg保存"]
+        
+  agent5_data_bus:
+    description: "Agent間通信・イベント配信専門"
+    critical_metrics:
+      event_dispatch:
+        target: "1ms以下"
+        measurement: "イベント配信時間"
+        event_types: ["frame_changed", "bb_created", "performance_warning"]
+        subscriber_count: "最大8Agent"
+        
+      message_transfer:
+        target: "1ms以下"
+        measurement: "メッセージ転送時間"
+        message_sizes: ["小（<1KB）", "中（1-10KB）", "大（10-100KB）"]
+        
+      communication_overhead:
+        target: "全体の5%以下"
+        measurement: "通信オーバーヘッド比率"
+        calculation: "通信時間/総処理時間"
+        
+      queue_performance:
+        target: "遅延ゼロ"
+        measurement: "キュー待機時間"
+        queue_types: ["高優先度", "通常", "低優先度"]
+        
+  agent6_cache_layer:
+    description: "高速キャッシュ・パフォーマンス最適化専門（最重要）"
+    critical_metrics:
+      frame_switching:
+        target: "50ms以下（絶対達成）"
+        measurement: "フレーム切り替え応答時間"
+        breakdown:
+          cache_lookup: "5ms以下"
+          memory_access: "30ms以下"
+          data_transfer: "10ms以下"
+          finalization: "5ms以下"
+        test_scenarios:
+          sequential_access: "連続フレーム切り替え"
+          random_access: "ランダムフレーム切り替え"
+          stress_test: "1000回連続切り替え"
+          
+      cache_hit_rate:
+        target: "95%以上"
+        measurement: "キャッシュヒット率"
+        calculation: "ヒット数/(ヒット数+ミス数)"
+        test_pattern: "通常使用パターン"
+        
+      memory_management:
+        target: "20GB上限制御"
+        measurement: "メモリ使用量"
+        monitoring: "RSS（実使用メモリ）"
+        strategies:
+          - "LRU削除による上限制御"
+          - "メモリ断片化最小化"
+          - "ガベージコレクション最適化"
+          
+      preload_efficiency:
+        target: "前後100フレーム先読み"
+        measurement: "先読み効率"
+        metrics:
+          - "先読みヒット率: 90%以上"
+          - "先読み時間: バックグラウンド実行"
+          - "メモリ効率: 無駄読み10%以下"
+          
+      lru_performance:
+        target: "アクセス時間O(1)"
+        measurement: "LRU操作時間"
+        operations: ["get", "put", "delete", "update"]
+        data_structure: "HashMap + DoubleLinkedList"
+        
+  agent7_persistence:
+    description: "ファイルI/O・自動保存・データ永続化専門"
+    critical_metrics:
+      file_save:
+        target: "100ms以下"
+        measurement: "ファイル保存時間"
+        breakdown:
+          txt_write: "50ms以下"
+          json_save: "30ms以下"
+          file_sync: "20ms以下"
+        optimization:
+          - "非同期I/O活用"
+          - "バッファリング最適化"
+          
+      auto_save:
+        target: "非同期・フレーム切り替え毎"
+        measurement: "自動保存処理時間"
+        frequency: "フレーム切り替え時"
+        mode: "バックグラウンド非同期"
+        
+      backup:
+        target: "5分毎・非同期"
+        measurement: "バックアップ処理時間"
+        scope: "変更ファイルのみ"
+        compression: "効率的圧縮"
+        
+      directory_monitoring:
+        target: "リアルタイム同期"
+        measurement: "ファイル変更検知時間"
+        events: ["作成", "更新", "削除"]
+        
+  agent8_monitoring:
+    description: "パフォーマンス監視・ログ・デバッグ専門"
+    critical_metrics:
+      metrics_collection:
+        target: "10ms以下"
+        measurement: "メトリクス収集時間"
+        frequency: "リアルタイム〜1分毎"
+        metrics: ["CPU", "メモリ", "I/O", "フレーム時間"]
+        
+      log_recording:
+        target: "5ms以下"
+        measurement: "ログ記録時間"
+        levels: ["DEBUG", "INFO", "WARNING", "ERROR"]
+        output: "ファイル・標準出力"
+        
+      monitoring_overhead:
+        target: "全体の2%以下"
+        measurement: "監視オーバーヘッド比率"
+        calculation: "監視時間/総処理時間"
+        
+      alert_response:
+        target: "1ms以下"
+        measurement: "アラート応答時間"
+        conditions: ["メモリ上限", "性能劣化", "エラー発生"]
+
+performance_test_scenarios:
+  standard_operation:
+    description: "標準操作性能テスト"
+    duration: "10分"
+    operations:
+      - "フレーム切り替え（A/D）: 100回"
+      - "BB作成（ドラッグ）: 50回"
+      - "BB削除（S）: 25回"
+      - "ID変更: 30回"
+      - "ズーム操作: 20回"
+    success_criteria:
+      - "全操作が性能目標内"
+      - "メモリリークなし"
+      - "エラー発生ゼロ"
+      
+  stress_test:
+    description: "ストレステスト"
+    duration: "30分"
+    operations:
+      - "連続フレーム切り替え: 1000回"
+      - "大量BB作成: 500個"
+      - "高速操作: 最大速度"
+    success_criteria:
+      - "性能劣化5%以下"
+      - "メモリ使用量20GB以下"
+      - "フレーム切り替え50ms維持"
+      
+  endurance_test:
+    description: "長時間動作テスト"
+    duration: "4時間"
+    operations:
+      - "通常操作継続"
+      - "自動保存確認"
+      - "メモリ使用量監視"
+    success_criteria:
+      - "性能劣化なし"
+      - "メモリリークなし"
+      - "データ整合性維持"
+      
+  memory_intensive_test:
+    description: "メモリ集約テスト"
+    duration: "1時間"
+    operations:
+      - "大量フレーム読み込み: 10000フレーム"
+      - "キャッシュ満杯状態維持"
+      - "LRU削除動作確認"
+    success_criteria:
+      - "メモリ上限20GB遵守"
+      - "キャッシュヒット率95%維持"
+      - "フレーム切り替え50ms維持"
+
+optimization_strategies:
+  cache_optimization:
+    lru_algorithm:
+      - "HashMap + DoubleLinkedList実装"
+      - "O(1)アクセス時間保証"
+      - "メモリ効率最大化"
+      
+    preload_strategy:
+      - "アクセスパターン学習"
+      - "先読み範囲動的調整"
+      - "バックグラウンド非同期読み込み"
+      
+    memory_management:
+      - "メモリマップファイル活用"
+      - "ページング最適化"
+      - "ガベージコレクション調整"
+      
+  ui_optimization:
+    rendering:
+      - "OpenGL GPU描画活用"
+      - "差分描画（dirty rectangle）"
+      - "オブジェクトプール活用"
+      
+    event_handling:
+      - "イベントハンドラー軽量化"
+      - "バッチ更新処理"
+      - "描画フレーム制限"
+      
+  computation_optimization:
+    numpy_vectorization:
+      - "IOU計算ベクトル化"
+      - "座標変換一括処理"
+      - "NumPy最適化フラグ活用"
+      
+    algorithm_efficiency:
+      - "計算結果キャッシュ"
+      - "事前計算テーブル"
+      - "近似計算活用"
+      
+  io_optimization:
+    file_access:
+      - "非同期I/O活用"
+      - "バッファリング最適化"
+      - "SSD特性活用"
+      
+    data_format:
+      - "効率的ファイル形式"
+      - "圧縮アルゴリズム"
+      - "ストリーミング処理"
+
+measurement_tools:
+  profiling:
+    python_profiler: "cProfile"
+    memory_profiler: "memory_profiler"
+    line_profiler: "line_profiler"
+    
+  monitoring:
+    system_monitor: "psutil"
+    performance_counter: "time.perf_counter()"
+    memory_tracker: "tracemalloc"
+    
+  benchmarking:
+    frame_timer: "カスタム高精度タイマー"
+    operation_timer: "コンテキストマネージャー"
+    stress_tester: "自動化テストスイート"
+
+success_criteria:
+  functional:
+    - "全機能正常動作"
+    - "操作性良好"
+    - "データ整合性100%"
+    
+  performance:
+    - "フレーム切り替え50ms以下100%達成"
+    - "キャッシュヒット率95%以上"
+    - "メモリ使用量20GB以下"
+    - "4時間連続動作安定性"
+    
+  quality:
+    - "単体テスト100%通過"
+    - "統合テスト100%通過"
+    - "E2Eテスト100%通過"
+    - "パフォーマンステスト100%通過"
