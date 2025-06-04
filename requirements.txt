@@ -1,0 +1,24 @@
+# Agent1 Presentation Layer Dependencies
+# PyQt6高速UI・BB描画・ショートカット専門
+
+PyQt6>=6.6.0
+PyOpenGL>=3.1.7
+numpy>=1.24.0
+pillow>=10.0.0
+
+# Development dependencies
+pytest>=7.4.0
+pytest-qt>=4.2.0
+pytest-mock>=3.11.0
+pytest-cov>=4.1.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Performance monitoring
+psutil>=5.9.0
+memory-profiler>=0.61.0
+line-profiler>=4.1.0
+
+# Type hints
+types-Pillow>=10.0.0
