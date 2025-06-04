@@ -46,11 +46,17 @@ class MainWindow(QMainWindow):
     bb_creation_requested = pyqtSignal(float, float, float, float, int, int)  # BB作成要求
     bb_deletion_requested = pyqtSignal(str)  # BB削除要求
     
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: Optional[QWidget] = None, project_info: Optional[tuple] = None):
         super().__init__(parent)
         
         # 性能測定用
         self.startup_timer = time.perf_counter()
+        
+        # プロジェクト情報
+        self.project_info = project_info
+        self.project_type = project_info[0] if project_info else None
+        self.project_path = project_info[1] if project_info else None
+        self.project_config = project_info[2] if project_info else {}
         
         # 設定管理
         self.config = WindowConfig()
@@ -61,9 +67,17 @@ class MainWindow(QMainWindow):
         self.setup_shortcuts()
         self.connect_signals()
         
+        # プロジェクト初期化
+        if self.project_info:
+            self.initialize_project()
+        
         # 初期化完了時間記録
         startup_time = (time.perf_counter() - self.startup_timer) * 1000
         print(f"MainWindow startup time: {startup_time:.2f}ms")
+        
+        # プロジェクト情報をタイトルに表示
+        if self.project_config.get('name'):
+            self.setWindowTitle(f"Fast Auto-Annotation System - {self.project_config['name']}")
         
     def setup_ui(self):
         """UI初期化（70%:30%分割）"""
@@ -320,13 +334,11 @@ class MainWindow(QMainWindow):
     
     def get_current_frame_id(self) -> int:
         """現在フレームID取得"""
-        # TODO: Implement frame tracking
-        return 0
+        return getattr(self, 'current_frame', 0)
         
     def get_max_frame_id(self) -> int:
         """最大フレームID取得"""
-        # TODO: Implement frame tracking
-        return 1000
+        return getattr(self, 'total_frames', 0) - 1
         
     def update_status(self, message: str):
         """ステータス更新"""
@@ -346,6 +358,62 @@ class MainWindow(QMainWindow):
         if elapsed > 100:
             print(f"WARNING: Window resize took {elapsed:.2f}ms (>100ms)")
             
+    def initialize_project(self):
+        """プロジェクト初期化"""
+        print(f"Initializing project: {self.project_type}")
+        
+        if self.project_type == "video":
+            self.initialize_video_project()
+        elif self.project_type == "images":
+            self.initialize_image_project() 
+        elif self.project_type == "existing":
+            self.initialize_existing_project()
+            
+        # ステータス更新
+        project_name = self.project_config.get('name', 'Unknown Project')
+        self.update_status(f"Project loaded: {project_name}")
+        
+    def initialize_video_project(self):
+        """動画プロジェクト初期化"""
+        video_path = self.project_path
+        print(f"Video project: {video_path}")
+        
+        # TODO: Agent4 Infrastructure連携
+        # - 動画読み込み
+        # - フレーム抽出（30fps → 5fps）
+        # - フレーム保存
+        
+        # 仮の実装：フレーム数設定
+        self.total_frames = 1000  # 仮の値
+        self.current_frame = 0
+        
+    def initialize_image_project(self):
+        """画像フォルダプロジェクト初期化"""
+        image_folder = self.project_path
+        print(f"Image project: {image_folder}")
+        
+        # TODO: Agent4 Infrastructure連携
+        # - 画像ファイル一覧取得
+        # - フレーム番号付きファイル名への変換
+        
+        # 仮の実装
+        self.total_frames = 500  # 仮の値
+        self.current_frame = 0
+        
+    def initialize_existing_project(self):
+        """既存プロジェクト初期化"""
+        project_file = self.project_path
+        print(f"Existing project: {project_file}")
+        
+        # TODO: Agent7 Persistence連携
+        # - プロジェクトファイル読み込み
+        # - 設定復元
+        # - アノテーション状態復元
+        
+        # 仮の実装
+        self.total_frames = 800  # 仮の値
+        self.current_frame = 0
+
     def closeEvent(self, event):
         """ウィンドウ閉じる処理"""
         # 設定保存

@@ -1,0 +1,13 @@
+{
+  "name": "Demo Project",
+  "description": "デモ用のサンプルプロジェクト",
+  "source_type": "demo",
+  "created": "2024-06-04",
+  "version": "1.0",
+  "settings": {
+    "frame_count": 100,
+    "fps": 5,
+    "individuals": 8,
+    "actions": ["sit", "stand", "milk", "water", "food"]
+  }
+}
