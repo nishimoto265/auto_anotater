@@ -320,8 +320,13 @@ class MouseHandler(QObject):
             # シーン座標に変換
             scene_pos = self.canvas.mapToScene(event.position().toPoint())
             
+            # シーンを取得
+            scene = self.canvas.scene()
+            if scene is None:
+                return
+            
             # アイテム検索
-            item = self.canvas.scene().itemAt(scene_pos, self.canvas.transform())
+            item = scene.itemAt(scene_pos, self.canvas.transform())
             
             if item and hasattr(item, 'bb_entity'):
                 bb_id = item.bb_entity.id
@@ -331,6 +336,8 @@ class MouseHandler(QObject):
                 
         except Exception as e:
             print(f"BB selection error: {e}")
+            import traceback
+            traceback.print_exc()
             
         elapsed = (time.perf_counter() - start_time) * 1000
         if elapsed > 1:

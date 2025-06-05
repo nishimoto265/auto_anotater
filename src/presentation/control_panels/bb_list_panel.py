@@ -284,6 +284,8 @@ class BBListPanel(QTableWidget):
                 
         except Exception as e:
             print(f"BB selection error: {e}")
+            import traceback
+            traceback.print_exc()
             
         elapsed = (time.perf_counter() - start_time) * 1000
         if elapsed > 1:

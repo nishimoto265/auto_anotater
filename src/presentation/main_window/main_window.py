@@ -554,24 +554,28 @@ class MainWindow(QMainWindow):
             self.total_frames = 0
             return
             
-        # 画像ファイル一覧取得
+        # 画像ファイル一覧取得（完全パス付き）
         image_files = []
+        frame_paths = []
         for file in os.listdir(image_folder):
             if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
                 image_files.append(file)
+                frame_paths.append(os.path.join(image_folder, file))
                 
         self.total_frames = len(image_files)
         self.frame_files = sorted(image_files)
+        self.frame_paths = sorted(frame_paths)
         self.images_directory = image_folder
         print(f"Loaded {self.total_frames} images from {image_folder}")
         
-        # ファイルリストパネル更新
+        # ファイルリストパネル更新（完全パスで）
         if hasattr(self, 'file_list_panel'):
-            self.file_list_panel.load_frame_list(self.frame_files)
+            self.file_list_panel.load_frame_list(self.frame_paths)
             
-        # 最初のフレームを表示
-        if self.total_frames > 0:
-            self.load_frame(0)
+            # 初回フレーム表示
+            if self.frame_paths:
+                first_frame_id = "frame_000000"
+                self.file_list_panel.select_frame(first_frame_id)
             
     def load_fallback_frames(self):
         """フォールバック: data/frames/から読み込み"""

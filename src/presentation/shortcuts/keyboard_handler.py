@@ -275,14 +275,16 @@ class KeyboardHandler(QObject):
     def _execute_action(self, key: str):
         """アクション実行"""
         if key in self.actions:
-            elapsed = self.actions[key].execute()
+            action = self.actions[key]
+            elapsed = action.execute()
             
             # 統計更新
             self.total_shortcuts_executed += 1
             self.total_execution_time += elapsed
             
-            # シグナル発出
-            self.shortcut_executed.emit(self.actions[key].name, elapsed)
+            # シグナル発出（name が文字列であることを確認）
+            action_name = action.name if isinstance(action.name, str) else str(action.name)
+            self.shortcut_executed.emit(action_name, elapsed)
             
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """キーイベントフィルター（高速処理）"""

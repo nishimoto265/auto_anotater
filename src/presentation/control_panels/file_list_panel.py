@@ -279,12 +279,21 @@ class FileListPanel(QWidget):
         try:
             if frame_id in self.frame_items:
                 item = self.frame_items[frame_id]
+                # UI更新を最小限に
+                self.frame_list.blockSignals(True)
                 self.frame_list.setCurrentItem(item)
+                self.frame_list.blockSignals(False)
+                
                 self.selected_frame_id = frame_id
                 self.frame_selected.emit(frame_id)
                 
-                # 選択アイテムを表示範囲に
-                self.frame_list.scrollToItem(item, QAbstractItemView.ScrollHint.EnsureVisible)
+                # スクロールは必要時のみ（パフォーマンス優先）
+                current_row = self.frame_list.currentRow()
+                visible_range = self.frame_list.viewport().height() // 80  # アイテム高さ80px想定
+                first_visible = self.frame_list.verticalScrollBar().value() // 80
+                
+                if current_row < first_visible or current_row > first_visible + visible_range:
+                    self.frame_list.scrollToItem(item, QAbstractItemView.ScrollHint.PositionAtCenter)
                 
         except Exception as e:
             print(f"Frame selection error: {e}")
