@@ -207,7 +207,7 @@ class BBCanvas(QGraphicsView):
             self.image_height = frame_pixmap.height()
             
             # シーンサイズ調整
-            self.scene.setSceneRect(frame_pixmap.rect())
+            self.scene.setSceneRect(QRectF(frame_pixmap.rect()))
             
             # ビューを画像にフィット（初回のみ）
             if not hasattr(self, 'view_fitted'):
@@ -429,6 +429,45 @@ class BBCanvas(QGraphicsView):
         if hasattr(self, 'parent') and hasattr(self.parent(), 'update_status'):
             status = f"FPS: {current_fps} | Render: {self.last_render_time:.1f}ms"
             self.parent().update_status(status)
+            
+    def load_frame(self, frame_path: str) -> bool:
+        """
+        フレーム画像を読み込んで表示
+        
+        Args:
+            frame_path: 画像ファイルパス
+            
+        Returns:
+            bool: 読み込み成功/失敗
+        """
+        import os
+        
+        if not os.path.exists(frame_path):
+            print(f"Frame file not found: {frame_path}")
+            return False
+            
+        try:
+            # 画像読み込み
+            pixmap = QPixmap(frame_path)
+            if pixmap.isNull():
+                print(f"Failed to load image: {frame_path}")
+                return False
+                
+            # 画像情報更新
+            self.image_width = pixmap.width()
+            self.image_height = pixmap.height()
+            
+            # フレーム表示
+            self.display_frame(pixmap)
+            
+            # ファイル名を記録
+            self.current_frame_path = frame_path
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error loading frame {frame_path}: {e}")
+            return False
             
     def get_performance_info(self) -> Dict[str, Any]:
         """性能情報取得"""

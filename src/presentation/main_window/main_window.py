@@ -8,6 +8,7 @@ PyQt6 メインウィンドウ・70%:30%レイアウト・高速レスポンス
 - パネル切り替え: 10ms以下
 """
 
+import os
 import time
 from typing import Optional, Dict, Any
 from PyQt6.QtWidgets import (
@@ -328,6 +329,21 @@ class MainWindow(QMainWindow):
         
     def on_frame_selected(self, frame_id: str):
         """フレーム選択時の処理"""
+        # フレームIDからファイルパスを取得
+        frame_path = self.get_frame_path_by_id(frame_id)
+        if frame_path:
+            # BBCanvasに画像を直接ロード
+            if self.bb_canvas.load_frame(frame_path):
+                # 現在フレーム更新
+                if hasattr(self, 'file_list_panel'):
+                    current_index = self.file_list_panel.get_current_frame_index()
+                    self.current_frame = current_index
+                    
+                # ステータス更新
+                self.update_status(f"Frame: {self.current_frame + 1}/{self.total_frames}")
+            else:
+                print(f"Failed to load frame: {frame_path}")
+        
         self.frame_change_requested.emit(frame_id)
         
     # ==================== ユーティリティメソッド ====================
@@ -339,6 +355,35 @@ class MainWindow(QMainWindow):
     def get_max_frame_id(self) -> int:
         """最大フレームID取得"""
         return getattr(self, 'total_frames', 0) - 1
+        
+    def get_frame_path_by_id(self, frame_id: str) -> str:
+        """フレームIDからファイルパスを取得"""
+        try:
+            # frame_000000 形式からインデックス抽出
+            frame_index = int(frame_id.split('_')[1])
+            
+            # frame_pathsが存在する場合はそれを使用
+            if hasattr(self, 'frame_paths') and frame_index < len(self.frame_paths):
+                return self.frame_paths[frame_index]
+            
+            # プロジェクトタイプに応じてパス構築（フォールバック）
+            if self.project_type in ["video", "images"]:
+                # 出力ディレクトリまたはフォールバック
+                output_dir = self.project_config.get('output_directory', '')
+                if output_dir and hasattr(self, 'frame_files') and frame_index < len(self.frame_files):
+                    return os.path.join(output_dir, self.frame_files[frame_index])
+                else:
+                    # フォールバック: data/frames/
+                    return f"/media/thithilab/volume/auto_anotatation/data/frames/{frame_index:06d}.jpg"
+            elif self.project_type == "existing":
+                # 既存プロジェクトの場合
+                if hasattr(self, 'frame_files') and frame_index < len(self.frame_files):
+                    return self.frame_files[frame_index]
+                    
+        except (ValueError, IndexError) as e:
+            print(f"Error parsing frame_id {frame_id}: {e}")
+            
+        return ""
         
     def update_status(self, message: str):
         """ステータス更新"""
@@ -376,44 +421,227 @@ class MainWindow(QMainWindow):
     def initialize_video_project(self):
         """動画プロジェクト初期化"""
         video_path = self.project_path
+        output_dir = self.project_config.get('output_directory', '')
         print(f"Video project: {video_path}")
+        print(f"Output directory: {output_dir}")
         
-        # TODO: Agent4 Infrastructure連携
-        # - 動画読み込み
-        # - フレーム抽出（30fps → 5fps）
-        # - フレーム保存
-        
-        # 仮の実装：フレーム数設定
-        self.total_frames = 1000  # 仮の値
+        # Agent4 Infrastructureで処理済みのフレームを読み込み
+        try:
+            from infrastructure.video.frame_extractor import FrameExtractor
+            from infrastructure.image.image_processor import ImageProcessor
+            
+            # フレーム抽出器初期化
+            self.frame_extractor = FrameExtractor()
+            self.image_processor = ImageProcessor()
+            
+            # 出力フォルダからフレーム一覧取得
+            if output_dir and os.path.exists(output_dir):
+                self.load_processed_frames(output_dir)
+            else:
+                print("Warning: No output directory specified or doesn't exist")
+                self.total_frames = 0
+                
+        except ImportError as e:
+            print(f"Agent4 Infrastructure not available: {e}")
+            # フォールバック: 出力ディレクトリまたはdata/frames/から読み込み
+            if output_dir and os.path.exists(output_dir):
+                self.load_processed_frames(output_dir)
+            else:
+                self.load_fallback_frames()
+            
         self.current_frame = 0
         
     def initialize_image_project(self):
         """画像フォルダプロジェクト初期化"""
         image_folder = self.project_path
+        output_dir = self.project_config.get('output_directory', '')
         print(f"Image project: {image_folder}")
+        print(f"Output directory: {output_dir}")
         
-        # TODO: Agent4 Infrastructure連携
-        # - 画像ファイル一覧取得
-        # - フレーム番号付きファイル名への変換
-        
-        # 仮の実装
-        self.total_frames = 500  # 仮の値
+        # Agent4 Infrastructureで処理済みの画像を読み込み
+        try:
+            from infrastructure.image.image_processor import ImageProcessor
+            
+            self.image_processor = ImageProcessor()
+            
+            # 出力フォルダからフレーム一覧取得
+            if output_dir:
+                self.load_processed_frames(output_dir)
+            else:
+                # 入力フォルダから直接読み込み
+                self.load_image_folder(image_folder)
+                
+        except ImportError as e:
+            print(f"Agent4 Infrastructure not available: {e}")
+            # フォールバック: 直接読み込み
+            self.load_image_folder(image_folder)
+            
         self.current_frame = 0
         
     def initialize_existing_project(self):
         """既存プロジェクト初期化"""
         project_file = self.project_path
+        images_dir = self.project_config.get('images_directory', '')
+        output_dir = self.project_config.get('output_directory', '')
         print(f"Existing project: {project_file}")
+        print(f"Images directory: {images_dir}")
+        print(f"Output directory: {output_dir}")
         
-        # TODO: Agent7 Persistence連携
-        # - プロジェクトファイル読み込み
-        # - 設定復元
-        # - アノテーション状態復元
-        
-        # 仮の実装
-        self.total_frames = 800  # 仮の値
+        # Agent7 Persistenceでプロジェクト読み込み
+        try:
+            from persistence.file_io.json_handler import JSONHandler
+            
+            self.json_handler = JSONHandler()
+            
+            # プロジェクト設定読み込み
+            project_data = self.json_handler.load_project(project_file)
+            
+            # 画像ディレクトリからフレーム読み込み
+            if images_dir:
+                self.load_image_folder(images_dir)
+            else:
+                print("Warning: No images directory specified")
+                self.total_frames = 0
+                
+            # アノテーションデータ復元
+            if 'annotations' in project_data:
+                self.load_annotations(project_data['annotations'])
+                
+        except ImportError as e:
+            print(f"Agent7 Persistence not available: {e}")
+            # フォールバック: 直接JSON読み込み
+            self.load_fallback_project(project_file, images_dir)
+            
         self.current_frame = 0
 
+    def load_processed_frames(self, output_dir: str):
+        """処理済みフレーム読み込み"""
+        import os
+        
+        if not os.path.exists(output_dir):
+            print(f"Output directory not found: {output_dir}")
+            self.total_frames = 0
+            return
+            
+        # 画像ファイル一覧取得（完全パス付き）
+        image_files = []
+        frame_paths = []
+        for file in os.listdir(output_dir):
+            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                image_files.append(file)
+                frame_paths.append(os.path.join(output_dir, file))
+                
+        self.total_frames = len(image_files)
+        self.frame_files = sorted(image_files)
+        self.frame_paths = sorted(frame_paths)
+        print(f"Loaded {self.total_frames} frames from {output_dir}")
+        
+        # ファイルリストパネル更新（完全パスで）
+        if hasattr(self, 'file_list_panel'):
+            self.file_list_panel.load_frame_list(self.frame_paths)
+            
+            # 初回フレーム表示
+            if self.frame_paths:
+                first_frame_id = "frame_000000"
+                self.file_list_panel.select_frame(first_frame_id)
+            
+    def load_image_folder(self, image_folder: str):
+        """画像フォルダ読み込み"""
+        import os
+        
+        if not os.path.exists(image_folder):
+            print(f"Image folder not found: {image_folder}")
+            self.total_frames = 0
+            return
+            
+        # 画像ファイル一覧取得
+        image_files = []
+        for file in os.listdir(image_folder):
+            if file.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                image_files.append(file)
+                
+        self.total_frames = len(image_files)
+        self.frame_files = sorted(image_files)
+        self.images_directory = image_folder
+        print(f"Loaded {self.total_frames} images from {image_folder}")
+        
+        # ファイルリストパネル更新
+        if hasattr(self, 'file_list_panel'):
+            self.file_list_panel.load_frame_list(self.frame_files)
+            
+        # 最初のフレームを表示
+        if self.total_frames > 0:
+            self.load_frame(0)
+            
+    def load_fallback_frames(self):
+        """フォールバック: data/frames/から読み込み"""
+        fallback_dirs = [
+            "data/frames",
+            os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "frames")
+        ]
+        
+        for fallback_dir in fallback_dirs:
+            if os.path.exists(fallback_dir):
+                self.load_processed_frames(fallback_dir)
+                return
+                
+        print("No fallback frames directory found, creating empty project")
+        self.total_frames = 0
+        self.frame_files = []
+        
+        # ステータス更新
+        if hasattr(self, 'status_bar'):
+            self.status_bar.showMessage("Ready - No frames loaded. Please process video first.")
+            
+    def load_fallback_project(self, project_file: str, images_dir: str):
+        """フォールバック: 簡単なJSON読み込み"""
+        import json
+        import os
+        
+        try:
+            if os.path.exists(project_file):
+                with open(project_file, 'r', encoding='utf-8') as f:
+                    project_data = json.load(f)
+                    print(f"Loaded project config: {project_data.get('name', 'Unknown')}")
+                    
+            if images_dir and os.path.exists(images_dir):
+                self.load_image_folder(images_dir)
+            else:
+                self.total_frames = 0
+                
+        except Exception as e:
+            print(f"Error loading fallback project: {e}")
+            self.total_frames = 0
+            
+    def load_annotations(self, annotations_data: dict):
+        """アノテーションデータ読み込み"""
+        # TODO: Agent3 Domainでアノテーションデータ処理
+        print(f"Loading annotations: {len(annotations_data)} frames")
+        
+    def load_frame(self, frame_index: int):
+        """指定フレーム読み込みと表示"""
+        if not hasattr(self, 'frame_files') or frame_index >= len(self.frame_files):
+            return
+            
+        frame_file = self.frame_files[frame_index]
+        
+        # フレームパス特定
+        if hasattr(self, 'images_directory'):
+            frame_path = os.path.join(self.images_directory, frame_file)
+        elif hasattr(self, 'project_config') and self.project_config.get('output_directory'):
+            frame_path = os.path.join(self.project_config['output_directory'], frame_file)
+        else:
+            frame_path = os.path.join("data/frames", frame_file)
+            
+        # キャンバスにフレーム読み込み
+        if hasattr(self, 'bb_canvas'):
+            self.bb_canvas.load_frame(frame_path)
+            
+        # ステータス更新
+        self.current_frame = frame_index
+        if hasattr(self, 'status_bar'):
+            self.status_bar.showMessage(f"Frame: {frame_index + 1}/{self.total_frames} - {frame_file}")
+        
     def closeEvent(self, event):
         """ウィンドウ閉じる処理"""
         # 設定保存
