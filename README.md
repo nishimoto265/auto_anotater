@@ -1,258 +1,261 @@
-# 高速オートアノテーションシステム（Fast Auto-Annotation System）
+# Auto Annotater - 研究用半自動アノテーションツール
 
-個人用動物行動解析向けの半自動アノテーションツール。4K動画から5fpsフレームを生成し、個体識別・行動識別のバウンディングボックス（BB）アノテーションを**フレーム切り替え50ms以下**で高速実行。
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+[![PyQt6](https://img.shields.io/badge/PyQt6-GUI-green.svg)](https://www.riverbankcomputing.com/software/pyqt/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-red.svg)](https://opencv.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 🎯 最重要目標
+## 概要
 
-**フレーム切り替え50ms以下絶対達成** - 64GBメモリを活用したLRUキャッシュによる高速化
+**auto_annotater** は研究用の半自動アノテーションツールです。コンピュータビジョン研究における画像データのアノテーション作業を効率化し、研究者の生産性向上を支援します。
 
-## 🏗️ Agent並列開発アーキテクチャ
+### 主な特徴
 
-### 8Agent専門分割システム
-```
-Agent1: Presentation層   ← PyQt6 UI・BB描画・ショートカット専門
-Agent2: Application層    ← ワークフロー・ビジネスロジック統合専門  
-Agent3: Domain層         ← BBエンティティ・IOU計算・ビジネスルール専門
-Agent4: Infrastructure層 ← OpenCV動画処理・フレーム変換専門
-Agent5: Data Bus層       ← Agent間通信・イベント配信専門
-Agent6: Cache層          ← 高速キャッシュ・パフォーマンス最適化専門（最重要）
-Agent7: Persistence層    ← ファイルI/O・自動保存・データ永続化専門
-Agent8: Monitoring層     ← パフォーマンス監視・ログ・デバッグ専門
-```
+- 🎯 **高速フレーム切り替え**: 50ms以下のフレーム表示（64GBメモリ活用）
+- 🖱️ **直感的UI**: PyQt6による高レスポンスなデスクトップアプリケーション
+- 📦 **多様な入力形式**: 動画ファイル、画像フォルダ、既存プロジェクト対応
+- 🎨 **16個体対応**: 最大16個体の同時トラッキング・アノテーション
+- 💾 **YOLO形式出力**: 機械学習モデル学習に即利用可能
+- ⚡ **高性能キャッシュ**: LRUキャッシュによる高速画像表示
 
-### V字モデル開発フロー（5-7日）
-1. **Phase 1** (1日): システム要件定義
-2. **Phase 2** (1日): Agent別仕様定義（8並列）
-3. **Phase 3** (1日): Agent詳細設計（8並列）
-4. **Phase 4** (2-4日): Agent並列実装（8並列）
-5. **Phase 5** (1日): 統合・テスト
+## AI駆動型開発手法による実装
 
-## 🚀 Quick Start
+このプロジェクトでは、複数のAIツールを戦略的に組み合わせた革新的な開発手法を採用しました：
 
-### 環境セットアップ
+1. **Claude** - 全体の要件定義、システム構造決定
+2. **Cursor** - 細かい要件定義、テストケース作成  
+3. **Claude Code** - 8並列でテストケースに基づいたテストコード作成
+4. **Cursor** - 統合処理
+5. **Claude Code** - 8並列実装（レイヤー別専門Agent開発）
+6. **Cursor** - 最終統合、仕上げ
+
+この手法により、従来の開発時間を大幅に短縮しつつ、高品質なコードを実現しています。
+
+## 使用技術
+
+### フロントエンド
+- **PyQt6** - 高性能GUIフレームワーク
+- **OpenGL** - 高速画像描画（オプション）
+- **QGraphicsView** - 拡大縮小・バウンディングボックス描画
+
+### バックエンド・処理
+- **Python 3.8+** - メイン開発言語
+- **OpenCV** - 動画処理・画像変換
+- **NumPy** - 数値計算・配列処理
+- **Pillow** - 画像ファイル読み込み
+
+### データ処理・機械学習
+- **YOLO形式** - バウンディングボックス座標系
+- **JSON** - プロジェクト設定・メタデータ
+- **LRU Cache** - 高速フレームキャッシュ
+
+### 開発・テスト
+- **pytest** - 単体テスト・統合テスト
+- **TDD** - テスト駆動開発手法
+- **V字モデル** - 品質保証プロセス
+
+## システム要件
+
+### 推奨環境
+- **OS**: Linux (Ubuntu 20.04+), Windows 10+, macOS 11+
+- **Python**: 3.8 以上
+- **メモリ**: 8GB以上（64GB推奨）
+- **ストレージ**: 10GB以上の空き容量
+
+### 依存関係
 ```bash
-# Python仮想環境作成
+# 主要依存関係
+PyQt6>=6.4.0
+opencv-python>=4.8.0
+numpy>=1.21.0
+Pillow>=9.0.0
+
+# 開発・テスト用
+pytest>=7.0.0
+pytest-qt>=4.2.0
+black>=22.0.0
+flake8>=5.0.0
+```
+
+## インストール・セットアップ
+
+### 1. リポジトリクローン
+```bash
+git clone https://github.com/your-username/auto_annotater.git
+cd auto_annotater
+```
+
+### 2. 仮想環境作成
+```bash
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate  # Linux/Mac
+# または
+venv\Scripts\activate     # Windows
+```
 
-# 依存関係インストール
+### 3. 依存関係インストール
+```bash
 pip install -r requirements.txt
-
-# Agent開発環境セットアップ
-python scripts/setup_agent_env.py
 ```
 
-### アプリケーション実行
+### 4. アプリケーション起動
 ```bash
-# アノテーションアプリ起動
 python src/main.py
-
-# デバッグモード
-python src/main.py --debug
-
-# 動画指定起動
-python src/main.py --video /path/to/video.mp4
 ```
 
-### パフォーマンステスト
-```bash
-# フレーム切り替え50ms確認
-pytest tests/e2e/test_frame_switching_performance/ -v
+## 使用方法
 
-# 総合ベンチマーク
-python scripts/performance_benchmark.py
-```
+### 基本的な使用手順
 
-## 📋 基本操作
+1. **プロジェクト作成**
+   - アプリケーション起動時にプロジェクト選択ダイアログが表示
+   - 動画ファイル、画像フォルダ、または既存プロジェクトを選択
+
+2. **フレーム表示・ナビゲーション**
+   - 左パネル: フレーム画像・バウンディングボックス表示
+   - 右パネル: フレーム一覧・操作パネル
+   - キーボードショートカット: A(前), D(次), W(作成), S(削除)
+
+3. **アノテーション作業**
+   - 個体ID選択（0-15）
+   - 行動ID選択（0-4）
+   - マウスドラッグでバウンディングボックス作成
+   - 既存BBの編集・削除
+
+4. **保存・エクスポート**
+   - 自動保存機能（作業中断対応）
+   - YOLO形式でエクスポート
+   - プロジェクトファイル保存
 
 ### キーボードショートカット
-- **A/D**: フレーム切り替え（前/次）
-- **W**: BB作成モード
-- **S**: BB削除
-- **Ctrl+Z**: 元に戻す
 
-### マウス操作
-- **ドラッグ**: BB作成・移動
-- **ホイール**: ズーム
-- **中クリック+ドラッグ**: パン
+| キー | 機能 | 性能目標 |
+|------|------|----------|
+| `A` | 前のフレーム | 50ms以下 |
+| `D` | 次のフレーム | 50ms以下 |
+| `W` | BB作成モード切り替え | 1ms以下 |
+| `S` | 選択BB削除 | 1ms以下 |
+| `Ctrl+Z` | 元に戻す | 10ms以下 |
+| `Escape` | 現在のアクションキャンセル | 1ms以下 |
 
-### UI構成（70%:30%レイアウト）
-- **左70%**: 4Kフレーム表示・BB描画キャンバス
-- **右30%**: 操作パネル（ID選択・行動選択・BB一覧・ファイル一覧）
+## アーキテクチャ
 
-## 🔧 Agent並列開発ガイド
+### 8層並列開発アーキテクチャ
 
-### Agent別ワークツリー作成
-```bash
-# Cache Agent（最重要）
-git worktree add worktrees/agent6_cache_layer agent6_cache_layer
-
-# Presentation Agent
-git worktree add worktrees/agent1_presentation agent1_presentation
-
-# その他Agent
-git worktree add worktrees/agent2_application agent2_application
-# ... 全8Agent分
+```
+┌─────────────────┬─────────────────┐
+│  Presentation   │  Application    │ ← Agent1,2: UI・ビジネスロジック
+├─────────────────┼─────────────────┤
+│     Domain      │ Infrastructure  │ ← Agent3,4: ドメイン・技術基盤
+├─────────────────┼─────────────────┤
+│   Data Bus      │   Cache Layer   │ ← Agent5,6: 通信・高速キャッシュ
+├─────────────────┼─────────────────┤
+│  Persistence    │   Monitoring    │ ← Agent7,8: 永続化・監視
+└─────────────────┴─────────────────┘
 ```
 
-### Agent別テスト実行
+### 性能目標
+
+| 層 | 担当Agent | 性能目標 |
+|----|-----------|-----------| 
+| Cache | Agent6 | フレーム切り替え50ms以下（最重要） |
+| Presentation | Agent1 | BB描画16ms以下、キー応答1ms以下 |
+| Application | Agent2 | ビジネスロジック処理10ms以下 |
+| Domain | Agent3 | IOU計算1ms以下、座標変換0.5ms以下 |
+| Infrastructure | Agent4 | 動画変換実速度、4K画像処理50ms以下 |
+| Data Bus | Agent5 | イベント配信1ms以下 |
+| Persistence | Agent7 | ファイル保存100ms以下 |
+| Monitoring | Agent8 | 監視オーバーヘッド10ms以下 |
+
+## アノテーション仕様
+
+### 個体識別・行動識別
+- **個体ID**: 0-15（最大16個体）
+- **行動ID**: 0-4（sit, stand, milk, water, food）
+- **座標系**: YOLO正規化座標（0.0-1.0）
+
+### 出力形式
+```
+# frame_000000.txt
+個体ID 中心X 中心Y 幅 高さ 行動ID 信頼度
+0 0.5123 0.3456 0.1234 0.0987 2 0.95
+1 0.2345 0.7890 0.0876 0.1234 0 0.87
+```
+
+## テスト
+
+### テスト実行
 ```bash
-# Cache Agent（最重要）- フレーム切り替え50msテスト
+# 全テスト実行
+pytest
+
+# 特定レイヤーのテスト
 pytest tests/unit/test_cache_layer/ -v
 
-# Presentation Agent - UI性能テスト
-pytest tests/unit/test_presentation/ -v
+# 性能テスト
+pytest tests/integration/test_performance/ -v
 
-# 統合テスト
-python scripts/run_integration_tests.py
+# カバレッジ付きテスト
+pytest --cov=src tests/
 ```
 
-### Agent開発手順
-1. **仕様確認**: `requirements/layers/[agent_name].md`
-2. **インターフェース確認**: `config/layer_interfaces.yaml`
-3. **性能目標確認**: `config/performance_targets.yaml`
-4. **TDD実装**: 単体テスト先行作成→実装
-5. **統合参加**: Agent間通信確認→全体統合
+### テスト構成
+- **単体テスト**: 各Agent（層）別の独立テスト
+- **統合テスト**: Agent間連携テスト
+- **E2Eテスト**: 全体ワークフローテスト
+- **性能テスト**: 50ms目標達成確認テスト
 
-## 📊 パフォーマンス目標
+## 開発
 
-### 最重要目標
-- **フレーム切り替え**: 50ms以下（絶対達成）
-- **キャッシュヒット率**: 95%以上
-- **メモリ使用量**: 20GB上限（64GBの1/3）
-
-### Agent別目標
-| Agent | 重要メトリクス | 目標値 |
-|-------|----------------|--------|
-| **Cache** | フレーム切り替え | **50ms以下** |
-| Presentation | BB描画 | 16ms以下 |
-| Application | ビジネスロジック | 10ms以下 |
-| Domain | IOU計算 | 1ms以下 |
-| Infrastructure | 4K画像処理 | 50ms以下 |
-| Data Bus | イベント配信 | 1ms以下 |
-| Persistence | ファイル保存 | 100ms以下 |
-| Monitoring | 監視オーバーヘッド | 10ms以下 |
-
-## 📁 データ形式
-
-### アノテーションファイル（YOLO形式）
-```
-# 000000.txt, 000001.txt, ...
-個体ID YOLO_X YOLO_Y YOLO_W YOLO_H 行動ID 信頼度
-
-例:
-0 0.5123 0.3456 0.1234 0.0987 2 0.9512
-1 0.2345 0.7890 0.0876 0.1234 0 0.8743
-```
-
-### 行動カテゴリ
-- **0**: sit（座る）
-- **1**: stand（立つ）
-- **2**: milk（授乳）
-- **3**: water（飲水）
-- **4**: food（摂食）
-
-### 個体ID
-- **範囲**: 0-15（16個体上限）
-- **色分け**: 自動色マッピング
-
-## 🔄 開発ワークフロー
-
-### Phase 2: Agent別仕様定義（8並列）
+### 開発環境セットアップ
 ```bash
-# 8つのTerminalで並列実行
-claude "Agent1 Presentation仕様: PyQt6 UI・BB描画・ショートカット処理"
-claude "Agent6 Cache仕様: フレーム切り替え50ms以下絶対達成のLRUキャッシュ"
-# ... 全Agent分
+# 開発依存関係インストール
+pip install -r requirements-dev.txt
+
+# コード品質チェック
+black src/
+flake8 src/
+mypy src/
+
+# Agent別並列開発
+git worktree add worktrees/agent1_presentation agent1_presentation
 ```
 
-### Phase 4: Agent並列実装
-**Day 1-2**: 基盤Agent（Cache・Data Bus）  
-**Day 2-3**: コアAgent（Domain・Infrastructure・Application）  
-**Day 3-4**: 統合Agent（Presentation・Persistence・Monitoring）
+### Agent別開発ガイド
+- 各AgentはPythonが独立して開発可能
+- `CLAUDE.md`に詳細な開発指示を記載
+- TDD（テスト駆動開発）を採用
+- 性能目標達成が必須要件
 
-### Phase 5: 統合戦略
-1. **基盤統合** (2h): Data Bus ↔ Cache
-2. **コア統合** (3h): Domain ↔ Application ↔ Infrastructure  
-3. **全体統合** (3h): 8Agent統合・フレーム切り替え50ms確認
+## 貢献
 
-## 🧪 テスト戦略
+1. フォークして開発ブランチ作成
+2. 機能実装・テスト追加
+3. コード品質チェック実行
+4. プルリクエスト作成
 
-### テスト種別
-- **単体テスト**: Agent別TDD・100%通過必須
-- **統合テスト**: Agent間通信・性能確認
-- **E2Eテスト**: フレーム切り替え50ms確認・完全ワークフロー
+### 貢献ガイドライン
+- Agent専門領域を尊重
+- 性能目標を遵守
+- テストカバレッジ90%以上維持
+- ドキュメント更新
 
-### 重要テストシナリオ
-1. **フレーム切り替え性能**: 1000回連続・50ms以下100%達成
-2. **メモリ使用量**: 4時間連続動作・20GB以下維持
-3. **操作性**: 全ショートカット・マウス操作正常動作
-4. **データ整合性**: アノテーション保存・読み込み100%正確
+## ライセンス
 
-## 📂 ディレクトリ構造
+MIT License - 詳細は [LICENSE](LICENSE) を参照
 
-```
-annotation_app/
-├── CLAUDE.md                   # Agent共通開発指示書
-├── requirement.yaml            # システム要件定義
-├── requirements/layers/        # Agent別仕様
-├── tests/                      # テストコード
-├── src/                        # 実装コード（8Agent別）
-├── config/                     # 設定・インターフェース
-├── data/                       # プロジェクトデータ
-├── scripts/                    # 開発・運用スクリプト
-└── worktrees/                  # Agent並列開発用
-```
+## 連絡先・サポート
 
-## ⚠️ 重要な制約
+- **Issues**: [GitHub Issues](https://github.com/your-username/auto_annotater/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-username/auto_annotater/discussions)
+- **Wiki**: [プロジェクトWiki](https://github.com/your-username/auto_annotater/wiki)
 
-### 禁止事項
-- ❌ React/Web技術（PyQt6デスクトップアプリのみ）
-- ❌ 動画再生機能（静的フレーム表示のみ）
-- ❌ Agent責任範囲外実装（レイヤー越境禁止）
-- ❌ フレーム切り替え50ms目標の妥協（絶対達成）
+## 謝辞
 
-### 必須事項
-- ✅ PyQt6 GUI framework使用
-- ✅ YOLO形式データ出力
-- ✅ フレーム切り替え50ms以下達成
-- ✅ TDD開発手法
-- ✅ Agent間Data Bus通信
+このプロジェクトは以下のAIツールとの協働により実現されました：
 
-## 🎯 成功基準
+- **Anthropic Claude** - システム設計・要件定義
+- **Claude Code** - 8並列Agent実装
+- **Cursor** - 統合・仕上げ開発
 
-### 機能要件
-- [ ] 4K動画→5fpsフレーム変換
-- [ ] BBドラッグ作成・16個体管理
-- [ ] YOLO形式自動保存
-- [ ] IOU追跡・ID継承
-
-### 性能要件
-- [ ] **フレーム切り替え50ms以下100%達成**
-- [ ] キャッシュヒット率95%以上
-- [ ] メモリ使用量20GB以下
-- [ ] 4時間連続動作安定性
-
-### 品質要件
-- [ ] 単体テスト100%通過
-- [ ] 統合テスト100%通過
-- [ ] E2Eテスト100%通過
-- [ ] Agent並列開発成功
-
-## 📞 サポート
-
-### トラブルシューティング
-- フレーム切り替えが遅い → Cache Agent最適化確認
-- メモリ不足 → キャッシュサイズ調整・LRU削除確認  
-- Agent間通信エラー → Data Bus設定確認
-- UI応答性問題 → Presentation Agent最適化確認
-
-### 開発サポート
-- Agent仕様: `requirements/layers/[agent_name].md`
-- パフォーマンス: `config/performance_targets.yaml`
-- インターフェース: `config/layer_interfaces.yaml`
-- 統合ガイド: `docs/integration_guide/`
-
----
-
-**このプロジェクトは Claude Agent 8並列開発により、個人用途に最適化された高速アノテーションシステムを実現します。最重要目標「フレーム切り替え50ms以下」をCache Agent専門化により確実に達成し、実用性の高いツールを短期間で完成させます。**
+AI駆動型開発手法の実証例として、従来手法では数ヶ月要する開発を大幅に短縮しつつ、高品質なソフトウェアを実現しています。
