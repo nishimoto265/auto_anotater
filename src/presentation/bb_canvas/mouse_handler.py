@@ -321,7 +321,7 @@ class MouseHandler(QObject):
             scene_pos = self.canvas.mapToScene(event.position().toPoint())
             
             # シーンを取得
-            scene = self.canvas.scene()
+            scene = self.canvas.scene
             if scene is None:
                 return
             

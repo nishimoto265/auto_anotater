@@ -68,6 +68,9 @@ class MainWindow(QMainWindow):
         self.setup_shortcuts()
         self.connect_signals()
         
+        # 初期フレーム設定
+        self.current_frame = 0
+        
         # プロジェクト初期化
         if self.project_info:
             self.initialize_project()
@@ -241,8 +244,14 @@ class MainWindow(QMainWindow):
         
         current_frame = self.get_current_frame_id()
         if current_frame > 0:
-            new_frame = f"{current_frame - 1:06d}"
-            self.frame_change_requested.emit(new_frame)
+            new_frame_id = f"frame_{current_frame - 1:06d}"
+            self.current_frame = current_frame - 1
+            # ファイルリストパネルも更新
+            if hasattr(self, 'file_list_panel'):
+                self.file_list_panel.select_frame(new_frame_id)
+            # 直接フレーム選択処理を実行
+            self.on_frame_selected(new_frame_id)
+            self.frame_change_requested.emit(new_frame_id)
             
         elapsed = (time.perf_counter() - start_time) * 1000
         if elapsed > 50:
@@ -255,8 +264,14 @@ class MainWindow(QMainWindow):
         current_frame = self.get_current_frame_id()
         max_frame = self.get_max_frame_id()
         if current_frame < max_frame:
-            new_frame = f"{current_frame + 1:06d}"
-            self.frame_change_requested.emit(new_frame)
+            new_frame_id = f"frame_{current_frame + 1:06d}"
+            self.current_frame = current_frame + 1
+            # ファイルリストパネルも更新
+            if hasattr(self, 'file_list_panel'):
+                self.file_list_panel.select_frame(new_frame_id)
+            # 直接フレーム選択処理を実行
+            self.on_frame_selected(new_frame_id)
+            self.frame_change_requested.emit(new_frame_id)
             
         elapsed = (time.perf_counter() - start_time) * 1000
         if elapsed > 50:
