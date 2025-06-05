@@ -39,9 +39,14 @@ class ShortcutAction:
         start_time = time.perf_counter()
         
         try:
-            self.handler()
+            if callable(self.handler):
+                self.handler()
+            else:
+                print(f"Handler is not callable: {type(self.handler)} = {self.handler}")
         except Exception as e:
-            print(f"Shortcut action error ({self.name}): {e}")
+            print(f"Shortcut action error ({self.handler}): {e}")
+            import traceback
+            traceback.print_exc()
             
         elapsed = (time.perf_counter() - start_time) * 1000
         

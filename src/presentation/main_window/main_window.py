@@ -218,7 +218,7 @@ class MainWindow(QMainWindow):
         }
         
         for key, handler in shortcuts.items():
-            self.keyboard_handler.register_shortcut(key, handler.__name__, handler)
+            self.keyboard_handler.register_shortcut(key, handler, handler.__name__)
             
     def connect_signals(self):
         """シグナル・スロット接続"""

@@ -91,8 +91,8 @@ def test_fixed_shortcuts():
         print("SUCCESS: All shortcuts processed without errors!")
         
         # キーボードハンドラーの統計情報表示
-        if hasattr(window, 'keyboard_handler'):
-            stats = window.keyboard_handler.get_performance_stats()
+        if hasattr(window, 'keyboard_handler') and hasattr(window.keyboard_handler, 'get_performance_info'):
+            stats = window.keyboard_handler.get_performance_info()
             print(f"\nPerformance Stats:")
             print(f"  Total shortcuts executed: {stats.get('total_executed', 0)}")
             print(f"  Average execution time: {stats.get('avg_execution_time', 0):.2f}ms")
