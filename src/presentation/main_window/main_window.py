@@ -71,6 +71,10 @@ class MainWindow(QMainWindow):
         # 初期フレーム設定
         self.current_frame = 0
         
+        # アノテーション管理
+        self.current_annotations = []  # 現在フレームのBBリスト
+        self.annotation_output_dir = None  # アノテーション保存先
+        
         # プロジェクト初期化
         if self.project_info:
             self.initialize_project()
@@ -281,7 +285,10 @@ class MainWindow(QMainWindow):
         """BB作成モード切り替え（Wキー・1ms以下）"""
         start_time = time.perf_counter()
         
+        print("BB creation mode toggle triggered")
         self.bb_canvas.toggle_creation_mode()
+        creation_mode = getattr(self.bb_canvas, 'creation_mode', False)
+        print(f"BB creation mode is now: {creation_mode}")
         
         elapsed = (time.perf_counter() - start_time) * 1000
         if elapsed > 1:
@@ -291,9 +298,24 @@ class MainWindow(QMainWindow):
         """選択BB削除（Sキー・1ms以下）"""
         start_time = time.perf_counter()
         
+        print("BB deletion triggered")
         selected_bb = self.bb_canvas.get_selected_bb()
+        print(f"Selected BB: {selected_bb}")
         if selected_bb:
+            print(f"Deleting BB: {selected_bb.id}")
             self.bb_deletion_requested.emit(selected_bb.id)
+        else:
+            print("No BB selected for deletion")
+            # 代替案: 最新のBBを削除
+            if self.current_annotations:
+                deleted_bb = self.current_annotations.pop()
+                print(f"Deleted latest BB: {deleted_bb['id']}")
+                # BBキャンバスを更新
+                self.bb_canvas.update_bounding_boxes(self.current_annotations)
+                # ファイルに保存
+                self.save_current_annotations()
+            else:
+                print("No BBs to delete")
             
         elapsed = (time.perf_counter() - start_time) * 1000
         if elapsed > 1:
@@ -318,8 +340,33 @@ class MainWindow(QMainWindow):
     
     def on_bb_created(self, x: float, y: float, w: float, h: float):
         """BB作成時の処理"""
-        current_id = self.id_panel.get_selected_id()
-        current_action = self.action_panel.get_selected_action()
+        try:
+            current_id = self.id_panel.get_selected_id() if hasattr(self, 'id_panel') else 0
+            current_action = self.action_panel.get_selected_action() if hasattr(self, 'action_panel') else 0
+        except:
+            current_id = 0
+            current_action = 0
+        
+        print(f"Creating BB: x={x:.3f}, y={y:.3f}, w={w:.3f}, h={h:.3f}, id={current_id}, action={current_action}")
+        
+        # 新しいBBエンティティ作成
+        bb_entity = {
+            'id': f"bb_{len(self.current_annotations)}_{int(time.time())}",
+            'x': x, 'y': y, 'w': w, 'h': h,
+            'individual_id': current_id,
+            'action_id': current_action,
+            'confidence': 1.0
+        }
+        
+        # 現在フレームのアノテーションに追加
+        self.current_annotations.append(bb_entity)
+        
+        # BBキャンバスを更新
+        self.bb_canvas.update_bounding_boxes(self.current_annotations)
+        
+        # ファイルに保存
+        self.save_current_annotations()
+        
         self.bb_creation_requested.emit(x, y, w, h, current_id, current_action)
         
     def on_bb_selected(self, bb_id: str):
@@ -353,9 +400,14 @@ class MainWindow(QMainWindow):
                 if hasattr(self, 'file_list_panel'):
                     current_index = self.file_list_panel.get_current_frame_index()
                     self.current_frame = current_index
+                
+                # 現在フレームのアノテーションを読み込み・表示
+                self.load_current_annotations()
+                self.bb_canvas.update_bounding_boxes(self.current_annotations)
                     
                 # ステータス更新
-                self.update_status(f"Frame: {self.current_frame + 1}/{self.total_frames}")
+                annotation_count = len(self.current_annotations)
+                self.update_status(f"Frame: {self.current_frame + 1}/{self.total_frames} | BBs: {annotation_count}")
             else:
                 print(f"Failed to load frame: {frame_path}")
         
@@ -399,6 +451,128 @@ class MainWindow(QMainWindow):
             print(f"Error parsing frame_id {frame_id}: {e}")
             
         return ""
+    
+    def save_current_annotations(self):
+        """現在フレームのアノテーションを保存"""
+        if not self.annotation_output_dir:
+            # 保存先ディレクトリを設定
+            self.setup_annotation_output_dir()
+            
+        if not self.annotation_output_dir:
+            print("No annotation output directory set")
+            return
+            
+        frame_id = f"{self.current_frame:06d}"
+        
+        try:
+            # TXTハンドラーを使用してYOLO形式で保存
+            from persistence.file_io.txt_handler import YOLOTxtHandler, BBEntity, Coordinates
+            from datetime import datetime
+            
+            handler = YOLOTxtHandler()
+            
+            # BBエンティティに変換
+            bb_entities = []
+            for bb_data in self.current_annotations:
+                bb_entity = BBEntity(
+                    id=bb_data['id'],
+                    frame_id=frame_id,
+                    individual_id=bb_data['individual_id'],
+                    action_id=bb_data['action_id'],
+                    coordinates=Coordinates(
+                        x=bb_data['x'],
+                        y=bb_data['y'],
+                        w=bb_data['w'],
+                        h=bb_data['h']
+                    ),
+                    confidence=bb_data['confidence'],
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+                bb_entities.append(bb_entity)
+            
+            # 保存実行
+            success = handler.save_annotations(frame_id, bb_entities, self.annotation_output_dir)
+            if success:
+                print(f"Saved {len(bb_entities)} annotations to {frame_id}.txt")
+            else:
+                print(f"Failed to save annotations for frame {frame_id}")
+                
+        except Exception as e:
+            print(f"Error saving annotations: {e}")
+            
+    def load_current_annotations(self):
+        """現在フレームのアノテーションを読み込み"""
+        if not self.annotation_output_dir:
+            self.current_annotations = []
+            return
+            
+        frame_id = f"{self.current_frame:06d}"
+        annotation_file = os.path.join(self.annotation_output_dir, f"{frame_id}.txt")
+        
+        if not os.path.exists(annotation_file):
+            self.current_annotations = []
+            return
+            
+        try:
+            # YOLOファイルを読み込み
+            from persistence.file_io.txt_handler import YOLOTxtHandler
+            
+            handler = YOLOTxtHandler()
+            bb_entities = handler.load_annotations(frame_id, self.annotation_output_dir)
+            
+            # 内部形式に変換
+            self.current_annotations = []
+            for bb in bb_entities:
+                bb_data = {
+                    'id': bb.id,
+                    'x': bb.coordinates.x,
+                    'y': bb.coordinates.y,
+                    'w': bb.coordinates.w,
+                    'h': bb.coordinates.h,
+                    'individual_id': bb.individual_id,
+                    'action_id': bb.action_id,
+                    'confidence': bb.confidence
+                }
+                self.current_annotations.append(bb_data)
+                
+            print(f"Loaded {len(self.current_annotations)} annotations from {frame_id}.txt")
+            
+        except Exception as e:
+            print(f"Error loading annotations: {e}")
+            self.current_annotations = []
+            
+    def setup_annotation_output_dir(self):
+        """アノテーション保存先ディレクトリを設定"""
+        from PyQt6.QtWidgets import QFileDialog
+        
+        # プロジェクト設定にある場合はそれを使用
+        if self.project_config.get('annotation_directory'):
+            self.annotation_output_dir = self.project_config['annotation_directory']
+            return
+            
+        # デフォルト保存先: プロジェクトディレクトリ/annotations
+        if hasattr(self, 'images_directory'):
+            default_dir = os.path.join(os.path.dirname(self.images_directory), 'annotations')
+        else:
+            default_dir = os.path.join(os.getcwd(), 'annotations')
+            
+        # ユーザーに選択させる
+        selected_dir = QFileDialog.getExistingDirectory(
+            self,
+            "アノテーション保存先を選択",
+            default_dir
+        )
+        
+        if selected_dir:
+            self.annotation_output_dir = selected_dir
+            os.makedirs(selected_dir, exist_ok=True)
+            print(f"Annotation output directory set to: {selected_dir}")
+        else:
+            # キャンセルされた場合はデフォルトを使用
+            self.annotation_output_dir = default_dir
+            os.makedirs(default_dir, exist_ok=True)
+            print(f"Using default annotation directory: {default_dir}")
         
     def update_status(self, message: str):
         """ステータス更新"""
