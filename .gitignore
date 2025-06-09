@@ -1,0 +1,234 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+app_venv/
+demo_venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Data files (videos, images, annotations)
+data/videos/
+data/frames/
+data/backup/
+data/annotations/backup/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.m4v
+*.3gp
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+*.gif
+*.raw
+*.svg
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+log/
+
+# Configuration files with sensitive info
+config/secrets.yaml
+config/api_keys.yaml
+config/database.yaml
+.env.local
+.env.production
+.env.staging
+
+# Git worktrees (already tracked, but exclude temp files)
+worktrees/*/tmp/
+worktrees/*/.git/
+worktrees/*/venv/
+worktrees/*/app_venv/
+worktrees/*/demo_venv/
+
+# Machine learning models
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.onnx
+models/
+checkpoints/
+
+# Documentation build
+docs/_build/
+docs/build/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# PyQt specific
+*.qm
+*.pro.user
+*.pro.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+ui_*.py
+
+# Cache and temporary directories
+cache/
+tmp/
+temp/
+.cache/
+
+# Performance and monitoring data
+performance_data/
+monitoring_logs/
+profiling_data/
+
+# Annotation tool specific
+annotation_cache/
+processed_frames/
+extracted_features/
+
+# Development and debugging
+debug/
+debug_output/
+*.debug
+core
+core.* 
