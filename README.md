@@ -1,144 +1,158 @@
-# Auto Annotater - 研究用半自動アノテーションツール
+# 🐾 高速オートアノテーションシステム
+**Fast Auto-Annotation System for Animal Behavior Analysis**
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![PyQt6](https://img.shields.io/badge/PyQt6-GUI-green.svg)](https://www.riverbankcomputing.com/software/pyqt/)
-[![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-red.svg)](https://opencv.org)
+<div align="center">
+
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyQt6](https://img.shields.io/badge/PyQt6-6.0+-green.svg)](https://pypi.org/project/PyQt6/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-4.0+-red.svg)](https://opencv.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 概要
+個人用動物行動解析向けの高速半自動アノテーションツール
 
-**auto_annotater** は研究用の半自動アノテーションツールです。コンピュータビジョン研究における画像データのアノテーション作業を効率化し、研究者の生産性向上を支援します。
+[機能](#-主な機能) • [インストール](#-インストール) • [使い方](#-使い方) • [キーボードショートカット](#-キーボードショートカット) • [トラブルシューティング](#-トラブルシューティング)
 
-### 主な特徴
+</div>
 
-- 🎯 **高速フレーム切り替え**: 50ms以下のフレーム表示（64GBメモリ活用）
-- 🖱️ **直感的UI**: PyQt6による高レスポンスなデスクトップアプリケーション
-- 📦 **多様な入力形式**: 動画ファイル、画像フォルダ、既存プロジェクト対応
-- 🎨 **16個体対応**: 最大16個体の同時トラッキング・アノテーション
-- 💾 **YOLO形式出力**: 機械学習モデル学習に即利用可能
-- ⚡ **高性能キャッシュ**: LRUキャッシュによる高速画像表示
+## 📋 概要
 
-## AI駆動型開発手法による実装
+このツールは、動物行動研究者向けに開発された**高速アノテーションツール**です。4K動画から5fpsでフレームを抽出し、最大16個体の動物に対してバウンディングボックス（BB）でアノテーションを行えます。
 
-このプロジェクトでは、複数のAIツールを戦略的に組み合わせた革新的な開発手法を採用しました：
+### 🎯 こんな方におすすめ
+- 🐭 動物行動研究をしている研究者
+- 📹 大量の動画データをアノテーションする必要がある方
+- ⚡ 高速で効率的なアノテーションツールを探している方
+- 🎮 キーボードショートカットで素早く作業したい方
 
-1. **Claude** - 全体の要件定義、システム構造決定
-2. **Cursor** - 細かい要件定義、テストケース作成  
-3. **Claude Code** - 8並列でテストケースに基づいたテストコード作成
-4. **Cursor** - 統合処理
-5. **Claude Code** - 8並列実装（レイヤー別専門Agent開発）
-6. **Cursor** - 最終統合、仕上げ
+## ✨ 主な機能
 
-この手法により、従来の開発時間を大幅に短縮しつつ、高品質なコードを実現しています。
+### 🎥 動画処理
+- **4K動画対応**: 高解像度動画からフレーム抽出
+- **5fps変換**: 動画を5fpsに変換して作業効率化
+- **高速フレーム切り替え**: 50ms以下の切り替え速度
 
-## 使用技術
+### 🎯 アノテーション機能
+- **マルチ個体対応**: 最大16個体の同時追跡
+- **5つの行動カテゴリ**: カスタマイズ可能な行動分類
+- **YOLO形式出力**: 機械学習にそのまま使用可能
+- **IOU追跡**: 簡易的な自動追跡機能
 
-### フロントエンド
-- **PyQt6** - 高性能GUIフレームワーク
-- **OpenGL** - 高速画像描画（オプション）
-- **QGraphicsView** - 拡大縮小・バウンディングボックス描画
+### 💾 データ管理
+- **自動保存**: フレーム切り替え時に自動保存
+- **バックアップ機能**: データロスト防止
+- **プロジェクト管理**: 複数プロジェクトの切り替え
 
-### バックエンド・処理
-- **Python 3.8+** - メイン開発言語
-- **OpenCV** - 動画処理・画像変換
-- **NumPy** - 数値計算・配列処理
-- **Pillow** - 画像ファイル読み込み
+### ⚡ パフォーマンス
+- **高速キャッシュ**: 64GBメモリを活用した先読みキャッシュ
+- **マルチスレッド処理**: 効率的なリソース活用
+- **OpenGL描画**: 高速なBB描画
 
-### データ処理・機械学習
-- **YOLO形式** - バウンディングボックス座標系
-- **JSON** - プロジェクト設定・メタデータ
-- **LRU Cache** - 高速フレームキャッシュ
+## 🚀 インストール
 
-### 開発・テスト
-- **pytest** - 単体テスト・統合テスト
-- **TDD** - テスト駆動開発手法
-- **V字モデル** - 品質保証プロセス
+### 必要要件
+- Python 3.8以上
+- 64GB RAM（推奨）
+- Windows/Mac/Linux対応
 
-## システム要件
+### インストール手順
 
-### 推奨環境
-- **OS**: Linux (Ubuntu 20.04+), Windows 10+, macOS 11+
-- **Python**: 3.8 以上
-- **メモリ**: 8GB以上（64GB推奨）
-- **ストレージ**: 10GB以上の空き容量
-
-### 依存関係
+1. **リポジトリのクローン**
 ```bash
-# 主要依存関係
-PyQt6>=6.4.0
-opencv-python>=4.8.0
-numpy>=1.21.0
-Pillow>=9.0.0
-
-# 開発・テスト用
-pytest>=7.0.0
-pytest-qt>=4.2.0
-black>=22.0.0
-flake8>=5.0.0
+git clone https://github.com/yourusername/auto_annotation.git
+cd auto_annotation
 ```
 
-## インストール・セットアップ
-
-### 1. リポジトリクローン
-```bash
-git clone https://github.com/your-username/auto_annotater.git
-cd auto_annotater
-```
-
-### 2. 仮想環境作成
+2. **仮想環境の作成**
 ```bash
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# または
-venv\Scripts\activate     # Windows
+
+# Windows
+venv\Scripts\activate
+
+# Mac/Linux
+source venv/bin/activate
 ```
 
-### 3. 依存関係インストール
+3. **依存ライブラリのインストール**
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. アプリケーション起動
+4. **アプリケーションの起動**
 ```bash
 python src/main.py
 ```
 
-## 使用方法
+## 📖 使い方
 
-### 基本的な使用手順
+### 1. プロジェクトの作成/選択
 
-1. **プロジェクト作成**
-   - アプリケーション起動時にプロジェクト選択ダイアログが表示
-   - 動画ファイル、画像フォルダ、または既存プロジェクトを選択
+アプリケーション起動時に表示されるダイアログで：
+- **新規プロジェクト**: 新しいアノテーションプロジェクトを開始
+- **既存プロジェクト**: 過去のプロジェクトを継続
 
-2. **フレーム表示・ナビゲーション**
-   - 左パネル: フレーム画像・バウンディングボックス表示
-   - 右パネル: フレーム一覧・操作パネル
-   - キーボードショートカット: A(前), D(次), W(作成), S(削除)
+### 2. 動画の読み込み
 
-3. **アノテーション作業**
-   - 個体ID選択（0-15）
-   - 行動ID選択（0-4）
-   - マウスドラッグでバウンディングボックス作成
-   - 既存BBの編集・削除
+1. プロジェクトフォルダ内の`videos/`に動画ファイルを配置
+2. アプリケーションが自動的に動画を検出
+3. 5fpsでフレーム抽出が開始（初回のみ）
 
-4. **保存・エクスポート**
-   - 自動保存機能（作業中断対応）
-   - YOLO形式でエクスポート
-   - プロジェクトファイル保存
+### 3. アノテーション作業
 
-### キーボードショートカット
+#### 基本的な流れ：
+1. **個体IDを選択**（右パネル）
+2. **行動カテゴリを選択**（右パネル）
+3. **BBを描画**（マウスドラッグ）
+4. **次のフレームへ**（Dキー）
 
-| キー | 機能 | 性能目標 |
-|------|------|----------|
-| `A` | 前のフレーム | 50ms以下 |
-| `D` | 次のフレーム | 50ms以下 |
-| `W` | BB作成モード切り替え | 1ms以下 |
-| `S` | 選択BB削除 | 1ms以下 |
-| `Ctrl+Z` | 元に戻す | 10ms以下 |
-| `Escape` | 現在のアクションキャンセル | 1ms以下 |
+#### BB（バウンディングボックス）の操作：
+- **描画**: マウスでドラッグ
+- **選択**: BBをクリック
+- **削除**: BBを選択してSキー
+- **調整**: BBの角をドラッグ
 
-## アーキテクチャ
+### 4. データの保存
+
+- **自動保存**: フレーム切り替え時に自動的に保存
+- **手動保存**: Ctrl+S（Cmd+S on Mac）
+- **保存形式**: YOLO形式（.txt）
+
+## ⌨️ キーボードショートカット
+
+### ナビゲーション
+| キー | 機能 |
+|------|------|
+| **A** | 前のフレーム |
+| **D** | 次のフレーム |
+| **Q** | 10フレーム戻る |
+| **E** | 10フレーム進む |
+| **Space** | 現在のフレーム番号を表示 |
+
+### BB操作
+| キー | 機能 |
+|------|------|
+| **W** | BB作成モード |
+| **S** | 選択中のBBを削除 |
+| **C** | すべてのBBをコピー |
+| **V** | BBをペースト |
+| **X** | 選択中のBBをカット |
+
+### 個体ID選択
+| キー | 機能 |
+|------|------|
+| **1-9** | 個体ID 1-9を選択 |
+| **0** | 個体ID 10を選択 |
+| **Shift+1-6** | 個体ID 11-16を選択 |
+
+### その他
+| キー | 機能 |
+|------|------|
+| **Ctrl+S** | 手動保存 |
+| **Ctrl+Z** | 元に戻す |
+| **Ctrl+Y** | やり直し |
+| **F1** | ヘルプ表示 |
+
+## 🏗️ アーキテクチャ
 
 ### 8層並列開発アーキテクチャ
 
@@ -156,106 +170,122 @@ python src/main.py
 
 ### 性能目標
 
-| 層 | 担当Agent | 性能目標 |
-|----|-----------|-----------| 
-| Cache | Agent6 | フレーム切り替え50ms以下（最重要） |
-| Presentation | Agent1 | BB描画16ms以下、キー応答1ms以下 |
-| Application | Agent2 | ビジネスロジック処理10ms以下 |
-| Domain | Agent3 | IOU計算1ms以下、座標変換0.5ms以下 |
-| Infrastructure | Agent4 | 動画変換実速度、4K画像処理50ms以下 |
-| Data Bus | Agent5 | イベント配信1ms以下 |
-| Persistence | Agent7 | ファイル保存100ms以下 |
-| Monitoring | Agent8 | 監視オーバーヘッド10ms以下 |
+| 層 | 性能目標 |
+|----|-----------| 
+| Cache | フレーム切り替え50ms以下（最重要） |
+| Presentation | BB描画16ms以下、キー応答1ms以下 |
+| Application | ビジネスロジック処理10ms以下 |
+| Domain | IOU計算1ms以下、座標変換0.5ms以下 |
 
-## アノテーション仕様
+## 🔧 トラブルシューティング
 
-### 個体識別・行動識別
-- **個体ID**: 0-15（最大16個体）
-- **行動ID**: 0-4（sit, stand, milk, water, food）
-- **座標系**: YOLO正規化座標（0.0-1.0）
+### よくある問題と解決方法
 
-### 出力形式
-```
-# frame_000000.txt
-個体ID 中心X 中心Y 幅 高さ 行動ID 信頼度
-0 0.5123 0.3456 0.1234 0.0987 2 0.95
-1 0.2345 0.7890 0.0876 0.1234 0 0.87
-```
-
-## テスト
-
-### テスト実行
+#### 1. アプリケーションが起動しない
 ```bash
-# 全テスト実行
-pytest
+# Pythonバージョンを確認
+python --version  # 3.8以上であることを確認
 
-# 特定レイヤーのテスト
-pytest tests/unit/test_cache_layer/ -v
-
-# 性能テスト
-pytest tests/integration/test_performance/ -v
-
-# カバレッジ付きテスト
-pytest --cov=src tests/
+# 依存ライブラリを再インストール
+pip install -r requirements.txt --force-reinstall
 ```
 
-### テスト構成
-- **単体テスト**: 各Agent（層）別の独立テスト
-- **統合テスト**: Agent間連携テスト
-- **E2Eテスト**: 全体ワークフローテスト
-- **性能テスト**: 50ms目標達成確認テスト
+#### 2. フレーム切り替えが遅い
+- メモリ使用量を確認（タスクマネージャー等）
+- `config/default_config.json`でキャッシュサイズを調整
+- デバッグモードをOFFにする: `python src/main.py`（--debugなし）
 
-## 開発
+#### 3. 動画が読み込めない
+- 対応形式: MP4, AVI, MOV
+- 動画ファイルを`data/videos/`フォルダに配置
+- ファイル名に特殊文字が含まれていないか確認
 
-### 開発環境セットアップ
-```bash
-# 開発依存関係インストール
-pip install -r requirements-dev.txt
+#### 4. BBが保存されない
+- `data/annotations/`フォルダの書き込み権限を確認
+- ディスク容量が十分にあるか確認
+- 自動保存が有効になっているか設定を確認
 
-# コード品質チェック
-black src/
-flake8 src/
-mypy src/
+## 📊 パフォーマンス最適化
 
-# Agent別並列開発
-git worktree add worktrees/agent1_presentation agent1_presentation
+### メモリ使用量の調整
+```json
+// config/default_config.json
+{
+  "cache": {
+    "max_memory_gb": 20,  // 最大メモリ使用量
+    "preload_frames": 100  // 先読みフレーム数
+  }
+}
 ```
 
-### Agent別開発ガイド
-- 各AgentはPythonが独立して開発可能
-- `CLAUDE.md`に詳細な開発指示を記載
-- TDD（テスト駆動開発）を採用
-- 性能目標達成が必須要件
+### フレームレートの調整
+```json
+{
+  "video": {
+    "target_fps": 5,  // 抽出フレームレート
+    "quality": 95     // JPEG品質（0-100）
+  }
+}
+```
 
-## 貢献
+## 🗂️ プロジェクト構造
 
-1. フォークして開発ブランチ作成
-2. 機能実装・テスト追加
-3. コード品質チェック実行
-4. プルリクエスト作成
+詳細なプロジェクト構造については、[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)を参照してください。
 
-### 貢献ガイドライン
-- Agent専門領域を尊重
-- 性能目標を遵守
-- テストカバレッジ90%以上維持
-- ドキュメント更新
+```
+auto_annotation/
+├── src/              # ソースコード
+├── tests/            # テストコード
+├── data/             # プロジェクトデータ
+├── config/           # 設定ファイル
+├── docs/             # ドキュメント
+└── requirements.txt  # 依存ライブラリ
+```
 
-## ライセンス
+## 🤖 AI駆動型開発
 
-MIT License - 詳細は [LICENSE](LICENSE) を参照
+このプロジェクトは、複数のAIツールを戦略的に組み合わせた革新的な開発手法を採用しました：
 
-## 連絡先・サポート
+1. **Claude** - 全体の要件定義、システム構造決定
+2. **Cursor** - 細かい要件定義、テストケース作成  
+3. **Claude Code** - 8並列でテストケースに基づいたテストコード作成
+4. **Cursor** - 統合処理
+5. **Claude Code** - 8並列実装（レイヤー別専門Agent開発）
+6. **Cursor** - 最終統合、仕上げ
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/auto_annotater/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/auto_annotater/discussions)
-- **Wiki**: [プロジェクトWiki](https://github.com/your-username/auto_annotater/wiki)
+この手法により、従来の開発時間を大幅に短縮しつつ、高品質なコードを実現しています。
 
-## 謝辞
+## 🤝 貢献方法
 
-このプロジェクトは以下のAIツールとの協働により実現されました：
+1. このリポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add amazing feature'`)
+4. ブランチをプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを作成
 
-- **Anthropic Claude** - システム設計・要件定義
-- **Claude Code** - 8並列Agent実装
-- **Cursor** - 統合・仕上げ開発
+## 📝 ライセンス
 
-AI駆動型開発手法の実証例として、従来手法では数ヶ月要する開発を大幅に短縮しつつ、高品質なソフトウェアを実現しています。
+このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
+
+## 🙏 謝辞
+
+- OpenCVコミュニティ
+- PyQt6開発チーム
+- 動物行動研究コミュニティ
+- Anthropic Claude - システム設計・要件定義
+- Claude Code - 8並列Agent実装
+- Cursor - 統合・仕上げ開発
+
+## 📞 サポート
+
+問題や質問がある場合は、[Issues](https://github.com/yourusername/auto_annotation/issues)でお知らせください。
+
+---
+
+<div align="center">
+
+**Happy Annotating! 🎉**
+
+[トップへ戻る](#-高速オートアノテーションシステム)
+
+</div>

@@ -35,8 +35,8 @@ class ActionButton(QPushButton):
         self.action_color = color
         
         # ボタン設定
-        self.setText(f"{action_id}: {action_name}")
-        self.setFixedSize(120, 40)
+        self.setText(action_name)
+        self.setFixedSize(80, 35)
         self.setCheckable(True)
         self.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         
@@ -145,8 +145,9 @@ class ActionPanel(QWidget):
         # 行動ボタングリッド
         button_frame = QFrame()
         button_frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        button_layout = QVBoxLayout(button_frame)
-        button_layout.setSpacing(3)
+        button_layout = QHBoxLayout(button_frame)  # 横並びに変更
+        button_layout.setSpacing(2)
+        button_layout.setContentsMargins(2, 2, 2, 2)
         
         # 5つの行動ボタン作成
         for action_id in range(5):
@@ -170,18 +171,7 @@ class ActionPanel(QWidget):
         self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.info_label)
         
-        # 使用統計表示
-        self.stats_label = QLabel("使用統計: 各行動0回")
-        self.stats_label.setFont(QFont("Arial", 9))
-        self.stats_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.stats_label)
-        
-        # 説明ラベル
-        self.description_label = QLabel("BB作成時に使用される行動が選択されます")
-        self.description_label.setFont(QFont("Arial", 8))
-        self.description_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.description_label.setWordWrap(True)
-        layout.addWidget(self.description_label)
+        # 使用統計表示とdescriptionは削除（詳細情報を非表示）
         
         # スペーサー
         layout.addStretch()
@@ -237,11 +227,11 @@ class ActionPanel(QWidget):
             # 情報表示更新
             action_config = self.ACTIONS[action_id]
             self.info_label.setText(
-                f"選択: {action_id} - {action_config['name']} ({action_config['description']})"
+                f"選択: {action_config['name']}"
             )
             
-            # 統計表示更新
-            self._update_stats_display()
+            # 統計表示更新（削除）
+            # self._update_stats_display()
             
             # シグナル発出
             self.action_selected.emit(action_id)

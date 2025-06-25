@@ -12,6 +12,7 @@ from typing import Callable, Optional, List
 from dataclasses import dataclass
 
 from .video_loader import VideoLoader, VideoProcessingError
+from ..opencv_init import get_opencv_version
 
 
 @dataclass
@@ -41,9 +42,8 @@ class FrameExtractor:
         self.thread_pool = ThreadPoolExecutor(max_workers=self.thread_count)
         self.video_loader = VideoLoader()
         
-        # Configure OpenCV for optimal performance
-        cv2.setUseOptimized(True)
-        cv2.setNumThreads(self.thread_count)
+        # Initialize OpenCV with version compatibility handling
+        opencv_version = get_opencv_version()
         
     def extract_frames(self, 
                       video_path: str, 

@@ -62,16 +62,10 @@ class BBListPanel(QTableWidget):
     bb_edited = pyqtSignal(str, dict)  # 編集されたBB ID, 変更内容
     bb_deleted = pyqtSignal(str)  # 削除されたBB ID
     
-    # テーブル列定義
+    # テーブル列定義（IDと行動のみ表示）
     COLUMNS = {
-        'ID': {'index': 0, 'width': 80, 'editable': False},
-        'Individual': {'index': 1, 'width': 70, 'editable': True},
-        'Action': {'index': 2, 'width': 70, 'editable': True},
-        'X': {'index': 3, 'width': 60, 'editable': True},
-        'Y': {'index': 4, 'width': 60, 'editable': True},
-        'W': {'index': 5, 'width': 60, 'editable': True},
-        'H': {'index': 6, 'width': 60, 'editable': True},
-        'Conf': {'index': 7, 'width': 60, 'editable': False},
+        'Individual': {'index': 0, 'width': 100, 'editable': False},
+        'Action': {'index': 1, 'width': 100, 'editable': False},
     }
     
     def __init__(self, parent=None):
@@ -206,8 +200,8 @@ class BBListPanel(QTableWidget):
     def _find_row_by_id(self, bb_id: str) -> int:
         """ID指定行検索"""
         for row in range(self.rowCount()):
-            item = self.item(row, 0)  # ID列
-            if item and item.text() == bb_id:
+            item = self.item(row, 0)  # Individual列（最初の列）
+            if item and hasattr(item, 'bb_entity') and item.bb_entity.id == bb_id:
                 return row
         return -1
         
@@ -220,36 +214,17 @@ class BBListPanel(QTableWidget):
     def _update_row(self, row: int, bb_entity: Any):
         """行更新"""
         try:
-            # ID列
-            id_item = BBTableItem(bb_entity.id, bb_entity)
-            if not self.COLUMNS['ID']['editable']:
-                id_item.setFlags(id_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.setItem(row, 0, id_item)
-            
             # Individual列
-            ind_item = BBTableItem(str(bb_entity.individual_id), bb_entity)
-            self.setItem(row, 1, ind_item)
+            ind_item = BBTableItem(f"ID {bb_entity.individual_id}", bb_entity)
+            ind_item.setFlags(ind_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 0, ind_item)
             
-            # Action列
-            action_item = BBTableItem(str(bb_entity.action_id), bb_entity)
-            self.setItem(row, 2, action_item)
-            
-            # 座標列
-            x_item = BBTableItem(f"{bb_entity.x:.3f}", bb_entity)
-            y_item = BBTableItem(f"{bb_entity.y:.3f}", bb_entity)
-            w_item = BBTableItem(f"{bb_entity.w:.3f}", bb_entity)
-            h_item = BBTableItem(f"{bb_entity.h:.3f}", bb_entity)
-            
-            self.setItem(row, 3, x_item)
-            self.setItem(row, 4, y_item)
-            self.setItem(row, 5, w_item)
-            self.setItem(row, 6, h_item)
-            
-            # 信頼度列
-            conf_item = BBTableItem(f"{bb_entity.confidence:.2f}", bb_entity)
-            if not self.COLUMNS['Conf']['editable']:
-                conf_item.setFlags(conf_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            self.setItem(row, 7, conf_item)
+            # Action列（行動名を表示）
+            action_names = {0: "Sit", 1: "Stand", 2: "Milk", 3: "Water", 4: "Food"}
+            action_name = action_names.get(bb_entity.action_id, f"Unknown({bb_entity.action_id})")
+            action_item = BBTableItem(action_name, bb_entity)
+            action_item.setFlags(action_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            self.setItem(row, 1, action_item)
             
             # 色設定
             if hasattr(bb_entity, 'color'):
@@ -278,9 +253,12 @@ class BBListPanel(QTableWidget):
         try:
             row = self._find_row_by_id(bb_id)
             if row >= 0:
+                # シグナルをブロックして選択（循環参照を防ぐ）
+                self.blockSignals(True)
                 self.selectRow(row)
+                self.blockSignals(False)
                 self.selected_bb_id = bb_id
-                self.bb_selected.emit(bb_id)
+                # シグナルは手動で発出しない（on_selection_changedで発出される）
                 
         except Exception as e:
             print(f"BB selection error: {e}")

@@ -7,6 +7,7 @@ import cv2
 import os
 from typing import Optional
 from dataclasses import dataclass
+from ..opencv_init import get_opencv_version
 
 
 @dataclass
@@ -43,9 +44,8 @@ class VideoLoader:
     
     def __init__(self):
         self.supported_formats = ['.mp4', '.avi']
-        # Configure OpenCV for optimal performance
-        cv2.setUseOptimized(True)
-        cv2.setNumThreads(-1)  # Use all available cores
+        # Initialize OpenCV with version compatibility handling
+        opencv_version = get_opencv_version()
         
     def load_video(self, video_path: str) -> VideoMetadata:
         """

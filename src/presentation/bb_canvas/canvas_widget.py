@@ -214,8 +214,10 @@ class BBCanvas(QGraphicsView):
                 self.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
                 self.view_fitted = True
                 
-            # BBを再描画
-            self.update_bounding_boxes_fast()
+            # BBを再描画（フレーム切り替え時は後でupdate_bounding_boxesが呼ばれるが、
+            # その時点でrendered_itemsがシーンに追加されていないので、ここで空のBBリストで初期化）
+            if not hasattr(self, '_skip_bb_update'):
+                self.bb_renderer._clear_rendered_items()
             
         except Exception as e:
             print(f"Frame display error: {e}")
@@ -355,6 +357,11 @@ class BBCanvas(QGraphicsView):
     
     def on_bb_drag_finished(self, start_pos: QPointF, end_pos: QPointF):
         """BBドラッグ完了処理"""
+        # プレビューBBを削除
+        if hasattr(self, 'preview_bb_item') and self.preview_bb_item:
+            self.scene.removeItem(self.preview_bb_item)
+            self.preview_bb_item = None
+            
         if not self.creation_mode:
             return
             
@@ -413,6 +420,36 @@ class BBCanvas(QGraphicsView):
         """現在アクションキャンセル"""
         self.creation_mode = False
         self.mouse_handler.cancel_current_action()
+        # プレビューBBを削除
+        if hasattr(self, 'preview_bb_item') and self.preview_bb_item:
+            self.scene.removeItem(self.preview_bb_item)
+            self.preview_bb_item = None
+            
+    def show_preview_bb(self, start_pos: QPointF, current_pos: QPointF):
+        """BB作成中のプレビュー表示"""
+        # 既存のプレビューを削除
+        if hasattr(self, 'preview_bb_item') and self.preview_bb_item:
+            self.scene.removeItem(self.preview_bb_item)
+            
+        # 新しいプレビュー矩形を作成
+        x = min(start_pos.x(), current_pos.x())
+        y = min(start_pos.y(), current_pos.y())
+        width = abs(current_pos.x() - start_pos.x())
+        height = abs(current_pos.y() - start_pos.y())
+        
+        from PyQt6.QtWidgets import QGraphicsRectItem
+        self.preview_bb_item = QGraphicsRectItem(x, y, width, height)
+        
+        # プレビューのスタイル設定（点線で半透明）
+        pen = QPen(self.ID_COLORS[self.current_id], 2, Qt.PenStyle.DashLine)
+        self.preview_bb_item.setPen(pen)
+        
+        brush = QBrush(self.ID_COLORS[self.current_id])
+        brush.setStyle(Qt.BrushStyle.DiagCrossPattern)
+        self.preview_bb_item.setBrush(brush)
+        self.preview_bb_item.setOpacity(0.3)
+        
+        self.scene.addItem(self.preview_bb_item)
         
     def get_current_zoom(self) -> float:
         """現在ズーム取得"""

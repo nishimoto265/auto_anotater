@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
     QFileDialog, QGroupBox, QRadioButton, QLineEdit, QTextEdit,
     QFormLayout, QDialogButtonBox, QMessageBox, QFrame,
-    QListWidget, QListWidgetItem, QSpinBox, QCheckBox
+    QListWidget, QListWidgetItem, QSpinBox, QCheckBox, QWidget
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QPixmap, QPalette
@@ -40,6 +40,9 @@ class ProjectStartupDialog(QDialog):
         
         self.setup_ui()
         self.connect_signals()
+        
+        # 初期表示フラグ
+        self._first_show = True
         
     def setup_ui(self):
         """UI構築"""
@@ -126,16 +129,28 @@ class ProjectStartupDialog(QDialog):
         layout.addLayout(image_layout)
         
         # 既存プロジェクト読み込み
-        self.existing_radio = QRadioButton("既存プロジェクト読み込み")
+        self.existing_radio = QRadioButton("既存アノテーション読み込み（txt形式）")
         layout.addWidget(self.existing_radio)
         
         existing_layout = QHBoxLayout()
         self.existing_path_edit = QLineEdit()
-        self.existing_path_edit.setPlaceholderText("プロジェクトファイル（.json）を選択...")
+        self.existing_path_edit.setPlaceholderText("アノテーションディレクトリ（txt）を選択...")
         self.existing_browse_btn = QPushButton("参照")
         existing_layout.addWidget(self.existing_path_edit)
         existing_layout.addWidget(self.existing_browse_btn)
         layout.addLayout(existing_layout)
+        
+        # 既存プロジェクト用画像ディレクトリ（既存プロジェクト選択時のみ表示）
+        # アノテーションディレクトリと同じインデントレベルに合わせる
+        self.existing_images_container = QWidget()
+        existing_images_layout = QHBoxLayout(self.existing_images_container)
+        existing_images_layout.setContentsMargins(0, 0, 0, 0)
+        self.existing_images_edit = QLineEdit()
+        self.existing_images_edit.setPlaceholderText("対応する画像ディレクトリを選択...")
+        self.existing_images_browse_btn = QPushButton("参照")
+        existing_images_layout.addWidget(self.existing_images_edit)
+        existing_images_layout.addWidget(self.existing_images_browse_btn)
+        layout.addWidget(self.existing_images_container)
         
         parent_layout.addWidget(group)
         
@@ -182,18 +197,6 @@ class ProjectStartupDialog(QDialog):
         output_layout.addWidget(self.output_dir_edit)
         output_layout.addWidget(self.output_browse_btn)
         layout.addRow("出力先ディレクトリ:", output_layout)
-        
-        # 既存プロジェクト用画像ディレクトリ（既存プロジェクト選択時のみ表示）
-        self.existing_images_layout = QHBoxLayout()
-        self.existing_images_edit = QLineEdit()
-        self.existing_images_edit.setPlaceholderText("対応する画像ディレクトリを選択...")
-        self.existing_images_browse_btn = QPushButton("参照")
-        self.existing_images_layout.addWidget(self.existing_images_edit)
-        self.existing_images_layout.addWidget(self.existing_images_browse_btn)
-        self.existing_images_row = layout.addRow("画像ディレクトリ:", self.existing_images_layout)
-        
-        # 初期状態では非表示
-        self.toggle_existing_images_visibility(False)
         
         parent_layout.addWidget(group)
         
@@ -250,7 +253,8 @@ class ProjectStartupDialog(QDialog):
     def on_project_type_changed(self):
         """プロジェクトタイプ変更時の処理"""
         # 既存プロジェクト選択時のみ画像ディレクトリ選択を表示
-        self.toggle_existing_images_visibility(self.existing_radio.isChecked())
+        is_existing = self.existing_radio.isChecked()
+        self.toggle_existing_images_visibility(is_existing)
         
         # 動画プロジェクト選択時のみ複数動画関連UI表示
         self.toggle_multi_video_visibility(self.video_radio.isChecked())
@@ -259,14 +263,8 @@ class ProjectStartupDialog(QDialog):
         
     def toggle_existing_images_visibility(self, visible: bool):
         """既存プロジェクト用画像ディレクトリの表示/非表示切り替え"""
-        # レイアウト内のウィジェットの表示切り替え
-        self.existing_images_edit.setVisible(visible)
-        self.existing_images_browse_btn.setVisible(visible)
-        
-        # ラベルの表示切り替え（FormLayoutの場合）
-        label_item = self.existing_images_row
-        if hasattr(label_item, 'widget') and label_item.widget():
-            label_item.widget().setVisible(visible)
+        # コンテナウィジェット全体を制御
+        self.existing_images_container.setVisible(visible)
             
     def toggle_multi_video_visibility(self, visible: bool):
         """複数動画関連UIの表示/非表示切り替え"""
@@ -397,20 +395,27 @@ class ProjectStartupDialog(QDialog):
                 self.project_name_edit.setText(f"{folder_name}_annotation")
                 
     def browse_existing_project(self):
-        """既存プロジェクト選択"""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "プロジェクトファイル選択",
-            "",
-            "プロジェクトファイル (*.json);;すべてのファイル (*)"
+        """既存アノテーションディレクトリ選択"""
+        folder_path = QFileDialog.getExistingDirectory(
+            self, "アノテーションディレクトリ選択", ""
         )
         
-        if file_path:
-            self.existing_path_edit.setText(file_path)
-            # プロジェクトファイルからプロジェクト名を自動設定
+        if folder_path:
+            # フォルダ内にtxtファイルがあるか確認
+            txt_files = [f for f in os.listdir(folder_path) if f.endswith('.txt')]
+            
+            if not txt_files:
+                QMessageBox.warning(
+                    self, "警告", 
+                    "選択されたフォルダにアノテーションファイル（.txt）が見つかりません。"
+                )
+                return
+                
+            self.existing_path_edit.setText(folder_path)
+            # プロジェクト名をフォルダ名から自動生成
             if not self.project_name_edit.text():
-                base_name = os.path.splitext(os.path.basename(file_path))[0]
-                self.project_name_edit.setText(base_name)
+                folder_name = os.path.basename(folder_path)
+                self.project_name_edit.setText(f"{folder_name}_continued")
             
     def validate_input(self):
         """入力値検証"""
@@ -514,7 +519,7 @@ class ProjectStartupDialog(QDialog):
                 self.selected_path = self.existing_path_edit.text().strip()
                 self.project_config = {
                     "source_type": "existing",
-                    "project_path": self.selected_path,
+                    "annotations_directory": self.selected_path,
                     "images_directory": self.existing_images_edit.text().strip(),
                     "output_directory": self.output_dir_edit.text().strip(),
                 }
@@ -562,6 +567,16 @@ class ProjectStartupDialog(QDialog):
     def get_project_info(self) -> Tuple[Optional[str], Optional[str], dict]:
         """選択されたプロジェクト情報取得"""
         return self.selected_type, self.selected_path, self.project_config
+    
+    def showEvent(self, event):
+        """ダイアログ表示時の処理"""
+        super().showEvent(event)
+        
+        # 初回表示時のみ初期状態を設定
+        if self._first_show:
+            self._first_show = False
+            # 初期状態を正しく設定
+            self.on_project_type_changed()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,92 @@
+{
+  "application": {
+    "name": "高速オートアノテーションシステム",
+    "version": "1.0.0",
+    "debug_mode": false
+  },
+  
+  "video": {
+    "target_fps": 5,
+    "supported_formats": ["mp4", "avi", "mov", "mkv"],
+    "quality": 95,
+    "max_resolution": [3840, 2160]
+  },
+  
+  "cache": {
+    "enabled": true,
+    "max_memory_gb": 20,
+    "preload_frames": 100,
+    "cache_strategy": "lru",
+    "cleanup_threshold": 0.9
+  },
+  
+  "annotation": {
+    "max_individuals": 16,
+    "max_actions": 5,
+    "default_confidence": 0.95,
+    "auto_save": true,
+    "auto_save_interval_frames": 10,
+    "output_format": "yolo"
+  },
+  
+  "ui": {
+    "window_size": [1920, 1080],
+    "canvas_ratio": 0.7,
+    "control_panel_ratio": 0.3,
+    "default_bb_color": "#00FF00",
+    "selected_bb_color": "#FF0000",
+    "bb_line_width": 2
+  },
+  
+  "performance": {
+    "frame_switch_target_ms": 50,
+    "bb_draw_target_ms": 16,
+    "key_response_target_ms": 1,
+    "multithread_enabled": true,
+    "opengl_enabled": true
+  },
+  
+  "tracking": {
+    "enabled": true,
+    "iou_threshold": 0.5,
+    "max_tracking_distance": 100,
+    "confidence_decay": 0.95
+  },
+  
+  "shortcuts": {
+    "navigation": {
+      "prev_frame": "A",
+      "next_frame": "D",
+      "prev_10_frames": "Q",
+      "next_10_frames": "E",
+      "show_frame_number": "Space"
+    },
+    "bb_operations": {
+      "create_mode": "W",
+      "delete_selected": "S",
+      "copy_all": "C",
+      "paste": "V",
+      "cut_selected": "X"
+    },
+    "file_operations": {
+      "save": "Ctrl+S",
+      "undo": "Ctrl+Z",
+      "redo": "Ctrl+Y"
+    }
+  },
+  
+  "backup": {
+    "enabled": true,
+    "interval_minutes": 5,
+    "max_backups": 10,
+    "compress": false
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "file_enabled": true,
+    "console_enabled": false,
+    "max_file_size_mb": 100,
+    "max_files": 5
+  }
+}

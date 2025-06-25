@@ -57,6 +57,13 @@ class MouseHandler(QObject):
         self.creation_mode = enabled
         self.selection_mode = not enabled
         
+        # カーソル形状変更
+        if self.canvas:
+            if enabled:
+                self.canvas.setCursor(Qt.CursorShape.CrossCursor)
+            else:
+                self.canvas.setCursor(Qt.CursorShape.ArrowCursor)
+        
     def set_pan_mode(self, enabled: bool):
         """パンモード設定"""
         self.pan_mode = enabled
@@ -290,8 +297,10 @@ class MouseHandler(QObject):
     def _handle_bb_drag(self, event: QMouseEvent):
         """BBドラッグ処理"""
         # ドラッグ中の視覚フィードバック
-        # TODO: リアルタイム矩形描画
-        pass
+        if self.canvas and hasattr(self.canvas, 'show_preview_bb'):
+            scene_start = self.canvas.mapToScene(self.drag_start_pos.toPoint())
+            scene_current = self.canvas.mapToScene(self.current_pos.toPoint())
+            self.canvas.show_preview_bb(scene_start, scene_current)
         
     def _handle_pan_drag(self, event: QMouseEvent):
         """パンドラッグ処理"""

@@ -46,9 +46,26 @@ class YOLOTxtHandler:
     - エンコーディング: UTF-8統一
     
     YOLO形式:
-    個体ID YOLO_X YOLO_Y YOLO_W YOLO_H 行動ID 信頼度
-    例: 0 0.5123 0.3456 0.1234 0.0987 2 0.9512
+    個体ID YOLO_X YOLO_Y YOLO_W YOLO_H 行動名 信頼度
+    例: 0 0.5123 0.3456 0.1234 0.0987 Milk 0.9512
     """
+    
+    # 行動IDと名前のマッピング
+    ACTION_ID_TO_NAME = {
+        0: "Sit",
+        1: "Stand",
+        2: "Milk",
+        3: "Water",
+        4: "Food"
+    }
+    
+    ACTION_NAME_TO_ID = {
+        "Sit": 0,
+        "Stand": 1,
+        "Milk": 2,
+        "Water": 3,
+        "Food": 4
+    }
     
     def __init__(self):
         self.encoding = 'utf-8'
@@ -176,9 +193,10 @@ class YOLOTxtHandler:
         
     def _format_yolo_line(self, bb: BBEntity) -> str:
         """BBエンティティ→YOLO行変換"""
+        action_name = self.ACTION_ID_TO_NAME.get(bb.action_id, "Unknown")
         return (f"{bb.individual_id} {bb.coordinates.x:.4f} {bb.coordinates.y:.4f} "
                 f"{bb.coordinates.w:.4f} {bb.coordinates.h:.4f} "
-                f"{bb.action_id} {bb.confidence:.4f}")
+                f"{action_name} {bb.confidence:.4f}")
                
     def _parse_yolo_line(self, line: str, frame_id: str, line_num: int) -> BBEntity:
         """YOLO行→BBエンティティ変換"""
@@ -189,7 +207,14 @@ class YOLOTxtHandler:
         try:
             individual_id = int(parts[0])
             x, y, w, h = map(float, parts[1:5])
-            action_id = int(parts[5])
+            
+            # 行動名から行動IDに変換（後方互換性のため数値も受け入れる）
+            action_str = parts[5]
+            if action_str.isdigit():
+                action_id = int(action_str)
+            else:
+                action_id = self.ACTION_NAME_TO_ID.get(action_str, 0)
+                
             confidence = float(parts[6])
             
             # データ検証

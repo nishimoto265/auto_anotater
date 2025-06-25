@@ -158,7 +158,8 @@ class ZoomController(QObject):
         
         # ズーム後の座標調整
         new_center = self.canvas.mapFromScene(scene_pos)
-        delta = center_point - new_center
+        # QPointFに変換して型を統一
+        delta = center_point.toPointF() - new_center.toPointF() if hasattr(center_point, 'toPointF') else center_point - new_center
         
         # スクロール調整
         h_scroll = self.canvas.horizontalScrollBar()

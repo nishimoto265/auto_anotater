@@ -63,7 +63,7 @@ class BBGraphicsItem(QGraphicsRectItem):
     def setup_appearance(self):
         """外観設定"""
         # ペン設定（境界線）
-        pen = QPen(self.bb_entity.color, 2)
+        pen = QPen(self.bb_entity.color, 3)  # 線幅を2から3に増加
         pen.setStyle(Qt.PenStyle.SolidLine)
         self.setPen(pen)
         
@@ -75,7 +75,7 @@ class BBGraphicsItem(QGraphicsRectItem):
         # 選択可能
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         
-    def add_text_label(self, text: str, font_size: int = 12):
+    def add_text_label(self, text: str, font_size: int = 36):
         """テキストラベル追加"""
         if not self.text_item:
             self.text_item = QGraphicsTextItem(text, self)
@@ -85,7 +85,7 @@ class BBGraphicsItem(QGraphicsRectItem):
             
             # ラベル位置調整
             rect = self.rect()
-            self.text_item.setPos(rect.x(), rect.y() - 20)
+            self.text_item.setPos(rect.x(), rect.y() - 60)
         else:
             self.text_item.setPlainText(text)
 
@@ -226,8 +226,10 @@ class BBRenderer:
                 
             item.setRect(rect)
             
-            # ラベル追加
-            label = f"ID:{bb_entity.individual_id} A:{bb_entity.action_id}"
+            # ラベル追加（行動名を表示）
+            action_names = {0: "Sit", 1: "Stand", 2: "Milk", 3: "Water", 4: "Food"}
+            action_name = action_names.get(bb_entity.action_id, f"Unknown({bb_entity.action_id})")
+            label = f"ID:{bb_entity.individual_id} {action_name}"
             item.add_text_label(label)
             
             elapsed = (time.perf_counter() - start_time) * 1000
@@ -247,9 +249,11 @@ class BBRenderer:
         item.setRect(rect)
         item.bb_entity = bb_entity
         
-        # ラベル更新
+        # ラベル更新（行動名を表示）
         if item.text_item:
-            label = f"ID:{bb_entity.individual_id} A:{bb_entity.action_id}"
+            action_names = {0: "Sit", 1: "Stand", 2: "Milk", 3: "Water", 4: "Food"}
+            action_name = action_names.get(bb_entity.action_id, f"Unknown({bb_entity.action_id})")
+            label = f"ID:{bb_entity.individual_id} {action_name}"
             item.text_item.setPlainText(label)
             
     def _clear_rendered_items(self):

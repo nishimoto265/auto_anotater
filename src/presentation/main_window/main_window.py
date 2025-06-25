@@ -166,8 +166,8 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(frame)
         layout.addWidget(self.id_panel)
         layout.addWidget(self.action_panel)
-        layout.addWidget(self.bb_list_panel)
-        layout.addWidget(self.file_list_panel)
+        layout.addWidget(self.bb_list_panel, 1)  # 残りの1/3スペース
+        layout.addWidget(self.file_list_panel, 2)  # 残りの2/3スペース
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(5)
         
@@ -303,6 +303,14 @@ class MainWindow(QMainWindow):
         print(f"Selected BB: {selected_bb}")
         if selected_bb:
             print(f"Deleting BB: {selected_bb.id}")
+            # current_annotationsから削除
+            self.current_annotations = [bb for bb in self.current_annotations if bb.get('id') != selected_bb.id]
+            # BBキャンバスを更新
+            self.bb_canvas.update_bounding_boxes(self.current_annotations)
+            # BB一覧も更新
+            self.update_bb_list_panel()
+            # ファイルに保存
+            self.save_current_annotations()
             self.bb_deletion_requested.emit(selected_bb.id)
         else:
             print("No BB selected for deletion")
@@ -312,6 +320,8 @@ class MainWindow(QMainWindow):
                 print(f"Deleted latest BB: {deleted_bb['id']}")
                 # BBキャンバスを更新
                 self.bb_canvas.update_bounding_boxes(self.current_annotations)
+                # BB一覧も更新
+                self.update_bb_list_panel()
                 # ファイルに保存
                 self.save_current_annotations()
             else:
@@ -364,6 +374,9 @@ class MainWindow(QMainWindow):
         # BBキャンバスを更新
         self.bb_canvas.update_bounding_boxes(self.current_annotations)
         
+        # BB一覧も更新
+        self.update_bb_list_panel()
+        
         # ファイルに保存
         self.save_current_annotations()
         
@@ -371,7 +384,9 @@ class MainWindow(QMainWindow):
         
     def on_bb_selected(self, bb_id: str):
         """BB選択時の処理"""
-        self.bb_list_panel.select_bb(bb_id)
+        # bb_list_panelのselect_bbはシグナルをブロックするため循環参照は起きない
+        if hasattr(self, 'bb_list_panel'):
+            self.bb_list_panel.select_bb(bb_id)
         
     def on_zoom_changed(self, zoom_level: float):
         """ズーム変更時の処理"""
@@ -396,14 +411,19 @@ class MainWindow(QMainWindow):
         if frame_path:
             # BBCanvasに画像を直接ロード
             if self.bb_canvas.load_frame(frame_path):
-                # 現在フレーム更新
-                if hasattr(self, 'file_list_panel'):
-                    current_index = self.file_list_panel.get_current_frame_index()
-                    self.current_frame = current_index
+                # 現在フレーム更新（frame_idから直接計算）
+                try:
+                    # frame_000000 形式からインデックス抽出
+                    self.current_frame = int(frame_id.split('_')[1])
+                except (ValueError, IndexError):
+                    # フォールバック
+                    if hasattr(self, 'file_list_panel'):
+                        self.current_frame = self.file_list_panel.get_current_frame_index()
                 
                 # 現在フレームのアノテーションを読み込み・表示
                 self.load_current_annotations()
                 self.bb_canvas.update_bounding_boxes(self.current_annotations)
+                self.update_bb_list_panel()
                     
                 # ステータス更新
                 annotation_count = len(self.current_annotations)
@@ -578,6 +598,27 @@ class MainWindow(QMainWindow):
         """ステータス更新"""
         self.status_bar.showMessage(message)
         
+    def update_bb_list_panel(self):
+        """BB一覧パネルを更新"""
+        if hasattr(self, 'bb_list_panel'):
+            # BBEntityオブジェクトのリストを作成
+            bb_entities = []
+            for ann in self.current_annotations:
+                from presentation.bb_canvas.canvas_widget import BBEntity
+                bb_entity = BBEntity(
+                    id=ann.get('id', ''),
+                    x=ann.get('x', 0.5),
+                    y=ann.get('y', 0.5),
+                    w=ann.get('w', 0.1),
+                    h=ann.get('h', 0.1),
+                    individual_id=ann.get('individual_id', 0),
+                    action_id=ann.get('action_id', 0),
+                    confidence=ann.get('confidence', 1.0),
+                    color=self.bb_canvas.ID_COLORS[ann.get('individual_id', 0) % 16]
+                )
+                bb_entities.append(bb_entity)
+            self.bb_list_panel.update_bb_list(bb_entities)
+        
     def resizeEvent(self, event):
         """ウィンドウリサイズ処理（100ms以下必達）"""
         start_time = time.perf_counter()
@@ -614,6 +655,11 @@ class MainWindow(QMainWindow):
         print(f"Video project: {video_path}")
         print(f"Output directory: {output_dir}")
         
+        # アノテーション保存先を設定
+        if output_dir:
+            self.annotation_output_dir = os.path.join(output_dir, 'annotations')
+            os.makedirs(self.annotation_output_dir, exist_ok=True)
+        
         # Agent4 Infrastructureで処理済みのフレームを読み込み
         try:
             from infrastructure.video.frame_extractor import FrameExtractor
@@ -647,6 +693,14 @@ class MainWindow(QMainWindow):
         print(f"Image project: {image_folder}")
         print(f"Output directory: {output_dir}")
         
+        # アノテーション保存先を設定
+        if output_dir:
+            self.annotation_output_dir = os.path.join(output_dir, 'annotations')
+        else:
+            # 画像フォルダの隣にannotationsフォルダを作成
+            self.annotation_output_dir = os.path.join(os.path.dirname(image_folder), 'annotations')
+        os.makedirs(self.annotation_output_dir, exist_ok=True)
+        
         # Agent4 Infrastructureで処理済みの画像を読み込み
         try:
             from infrastructure.image.image_processor import ImageProcessor
@@ -669,37 +723,30 @@ class MainWindow(QMainWindow):
         
     def initialize_existing_project(self):
         """既存プロジェクト初期化"""
-        project_file = self.project_path
+        # 新形式: アノテーションディレクトリと画像ディレクトリ
+        annotations_dir = self.project_config.get('annotations_directory', self.project_path)
         images_dir = self.project_config.get('images_directory', '')
         output_dir = self.project_config.get('output_directory', '')
-        print(f"Existing project: {project_file}")
+        print(f"Existing annotations: {annotations_dir}")
         print(f"Images directory: {images_dir}")
         print(f"Output directory: {output_dir}")
         
-        # Agent7 Persistenceでプロジェクト読み込み
-        try:
-            from persistence.file_io.json_handler import JSONHandler
+        # アノテーション保存先を設定
+        self.annotation_output_dir = annotations_dir
+        
+        # 画像ディレクトリからフレーム読み込み
+        if images_dir:
+            self.load_image_folder(images_dir)
             
-            self.json_handler = JSONHandler()
-            
-            # プロジェクト設定読み込み
-            project_data = self.json_handler.load_project(project_file)
-            
-            # 画像ディレクトリからフレーム読み込み
-            if images_dir:
-                self.load_image_folder(images_dir)
-            else:
-                print("Warning: No images directory specified")
-                self.total_frames = 0
-                
-            # アノテーションデータ復元
-            if 'annotations' in project_data:
-                self.load_annotations(project_data['annotations'])
-                
-        except ImportError as e:
-            print(f"Agent7 Persistence not available: {e}")
-            # フォールバック: 直接JSON読み込み
-            self.load_fallback_project(project_file, images_dir)
+            # 初回フレームのアノテーション読み込み
+            if self.total_frames > 0:
+                self.current_frame = 0
+                self.load_current_annotations()
+                self.bb_canvas.update_bounding_boxes(self.current_annotations)
+                self.update_bb_list_panel()
+        else:
+            print("Warning: No images directory specified")
+            self.total_frames = 0
             
         self.current_frame = 0
 

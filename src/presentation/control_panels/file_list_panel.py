@@ -33,9 +33,9 @@ class FrameListItem(QListWidgetItem):
         self.annotation_count = 0
         
         # 表示設定
-        self.setText(f"Frame {frame_index:06d}")
-        self.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setSizeHint(QSize(120, 80))
+        self.setText(f"{frame_index:06d}")
+        self.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.setSizeHint(QSize(120, 25))  # 高さを更に縮小
         
         # 初期スタイル設定
         self.update_appearance()
@@ -49,12 +49,12 @@ class FrameListItem(QListWidgetItem):
                 # アノテーション有り: 緑背景
                 brush = QBrush(QColor(200, 255, 200))
                 self.setBackground(brush)
-                self.setText(f"Frame {self.frame_index:06d}\n({self.annotation_count} BBs)")
+                self.setText(f"{self.frame_index:06d} [{self.annotation_count}]")
             else:
                 # アノテーション無し: 通常背景
                 brush = QBrush(QColor(255, 255, 255))
                 self.setBackground(brush)
-                self.setText(f"Frame {self.frame_index:06d}\n(No BBs)")
+                self.setText(f"{self.frame_index:06d}")
                 
         except Exception as e:
             print(f"Frame item appearance update error: {e}")
@@ -146,8 +146,9 @@ class FileListPanel(QWidget):
         self.frame_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.frame_list.setViewMode(QListWidget.ViewMode.ListMode)
         self.frame_list.setResizeMode(QListWidget.ResizeMode.Adjust)
-        self.frame_list.setFont(QFont("Arial", 8))
+        self.frame_list.setFont(QFont("Arial", 7))  # フォントサイズを8から7に縮小
         self.frame_list.setAlternatingRowColors(True)
+        self.frame_list.setSpacing(0)  # アイテム間のスペースを0に
         
         list_layout.addWidget(self.frame_list)
         layout.addWidget(list_frame)
@@ -169,17 +170,7 @@ class FileListPanel(QWidget):
             
         layout.addWidget(nav_frame)
         
-        # 選択情報
-        self.selection_label = QLabel("選択: なし")
-        self.selection_label.setFont(QFont("Arial", 9))
-        self.selection_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.selection_label)
-        
-        # 統計情報
-        self.stats_label = QLabel("性能: 更新0回")
-        self.stats_label.setFont(QFont("Arial", 8))
-        self.stats_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.stats_label)
+        # 選択情報と統計情報は削除（詳細情報を非表示）
         
     def setup_connections(self):
         """シグナル接続"""
@@ -320,9 +311,6 @@ class FileListPanel(QWidget):
             self.selected_frame_id = current_item.frame_id
             self.frame_selected.emit(current_item.frame_id)
             
-            # 選択情報更新
-            self.selection_label.setText(f"選択: {current_item.frame_id} (Index: {current_item.frame_index})")
-            
     def on_item_double_clicked(self, item: QListWidgetItem):
         """アイテムダブルクリック処理"""
         if isinstance(item, FrameListItem):
@@ -361,17 +349,7 @@ class FileListPanel(QWidget):
                 
     def update_info_display(self):
         """情報表示更新"""
-        self.info_label.setText(f"フレーム数: {self.total_frames} / ロード済み: {self.loaded_frames}")
-        
-        # 統計更新
-        avg_update_time = (self.total_update_time / self.update_count 
-                          if self.update_count > 0 else 0)
-        avg_selection_time = (sum(self.selection_times) / len(self.selection_times)
-                             if self.selection_times else 0)
-        
-        self.stats_label.setText(
-            f"性能: 更新{self.update_count}回 (平均{avg_update_time:.1f}ms), 選択平均{avg_selection_time:.1f}ms"
-        )
+        self.info_label.setText(f"フレーム数: {self.total_frames}")
         
     def get_selected_frame_id(self) -> Optional[str]:
         """選択フレームID取得"""

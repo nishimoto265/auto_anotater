@@ -10,6 +10,7 @@ from typing import Tuple, Optional
 from dataclasses import dataclass
 
 from ..video.video_loader import InfrastructureError
+from ..opencv_init import get_opencv_version
 
 
 class ImageProcessingError(InfrastructureError):
@@ -41,12 +42,11 @@ class ImageProcessor:
     def __init__(self, use_gpu: bool = False):
         self.use_gpu = use_gpu
         
-        # Configure OpenCV for optimal performance
-        cv2.setUseOptimized(True)
-        cv2.setNumThreads(-1)  # Use all available cores
+        # Initialize OpenCV with version compatibility handling
+        opencv_version = get_opencv_version()
         
-        # Set optimal buffer size for large images
-        cv2.setBufferAreaMaxSize(1024 * 1024 * 100)  # 100MB buffer
+        # Note: OpenCV optimization is handled in opencv_init module
+        # This ensures version compatibility and prevents deprecated function errors
         
     def load_image(self, image_path: str) -> np.ndarray:
         """
