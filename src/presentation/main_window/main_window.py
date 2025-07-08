@@ -132,7 +132,7 @@ class MainWindow(QMainWindow):
         # スプリッター設定
         self.main_splitter.addWidget(self.canvas_frame)
         self.main_splitter.addWidget(self.panel_frame)
-        self.main_splitter.setSizes([1320, 600])  # キャンバスと2列パネルの比率調整
+        self.main_splitter.setSizes([1344, 576])  # 70%:30% for 1920px width
         self.main_splitter.setStretchFactor(0, 7)  # キャンバス優先
         self.main_splitter.setStretchFactor(1, 3)
         
@@ -162,11 +162,11 @@ class MainWindow(QMainWindow):
         return frame
         
     def create_panel_frame(self) -> QFrame:
-        """操作パネルフレーム作成（2列構成）"""
+        """操作パネルフレーム作成"""
         frame = QFrame()
         frame.setFrameStyle(QFrame.Shape.StyledPanel)
         frame.setLineWidth(1)
-        frame.setFixedWidth(600)  # 全体幅を広げて2列対応
+        frame.setFixedWidth(400)  # 固定幅
         
         # 操作パネル作成
         self.id_panel = IDPanel()
@@ -184,55 +184,28 @@ class MainWindow(QMainWindow):
         self.bb_list_panel = BBListPanel()
         self.file_list_panel = FileListPanel()
         
-        # 2列レイアウト用の水平レイアウト
-        horizontal_layout = QHBoxLayout()
-        horizontal_layout.setSpacing(5)
-        
-        # 左列: 既存の操作パネル（コンパクト化）
+        # スクロールエリアを作成してパネルを収納
         from PyQt6.QtWidgets import QScrollArea
-        left_scroll = QScrollArea()
-        left_scroll.setMaximumWidth(280)  # 左列の幅を制限
-        left_widget = QWidget()
-        left_layout = QVBoxLayout(left_widget)
-        left_layout.setSpacing(2)  # パネル間のスペースを狭く
+        scroll_area = QScrollArea()
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
         
-        # 左列にパネルを追加
-        left_layout.addWidget(self.id_panel)
-        left_layout.addWidget(self.action_panel)
-        left_layout.addWidget(self.color_mode_panel)
-        left_layout.addWidget(self.modify_panel)
-        left_layout.addWidget(self.continuous_mode_panel)
-        left_layout.addStretch()
+        # パネルを追加
+        scroll_layout.addWidget(self.id_panel)
+        scroll_layout.addWidget(self.action_panel)
+        scroll_layout.addWidget(self.color_mode_panel)
+        scroll_layout.addWidget(self.modify_panel)
+        scroll_layout.addWidget(self.continuous_mode_panel)
+        scroll_layout.addWidget(self.bb_list_panel)
+        scroll_layout.addWidget(self.file_list_panel)
+        scroll_layout.addStretch()
         
-        left_scroll.setWidget(left_widget)
-        left_scroll.setWidgetResizable(True)
-        
-        # 右列: BB一覧とフレーム一覧
-        right_scroll = QScrollArea()
-        right_scroll.setMaximumWidth(300)  # 右列の幅
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        right_layout.setSpacing(2)
-        
-        # BB一覧パネル（高さ固定）
-        self.bb_list_panel.setMaximumHeight(300)  # 高さを維持
-        right_layout.addWidget(self.bb_list_panel)
-        
-        # フレーム一覧パネル（残りの高さを最大化）
-        self.file_list_panel.setMinimumHeight(400)  # 最小高さ確保
-        right_layout.addWidget(self.file_list_panel)
-        right_layout.addStretch()
-        
-        right_scroll.setWidget(right_widget)
-        right_scroll.setWidgetResizable(True)
-        
-        # 2列をhorizontal_layoutに追加
-        horizontal_layout.addWidget(left_scroll)
-        horizontal_layout.addWidget(right_scroll)
+        scroll_area.setWidget(scroll_widget)
+        scroll_area.setWidgetResizable(True)
         
         # メインレイアウト
         layout = QVBoxLayout(frame)
-        layout.addLayout(horizontal_layout)
+        layout.addWidget(scroll_area)
         layout.setContentsMargins(5, 5, 5, 5)
         
         return frame
@@ -1081,16 +1054,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'layout_manager'):
             self.layout_manager.update_layout(self.size())
             
-        # ウィンドウサイズに応じて右側パネルの幅を調整
-        if hasattr(self, 'panel_frame'):
-            window_width = self.width()
-            if window_width < 1400:  # 小さいウィンドウ
-                self.panel_frame.setFixedWidth(500)
-            elif window_width < 1600:  # 中サイズ
-                self.panel_frame.setFixedWidth(550)
-            else:  # 大きいウィンドウ
-                self.panel_frame.setFixedWidth(600)
-                
         elapsed = (time.perf_counter() - start_time) * 1000
         if elapsed > 100:
             print(f"WARNING: Window resize took {elapsed:.2f}ms (>100ms)")
