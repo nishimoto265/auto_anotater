@@ -1,0 +1,39 @@
+[
+  {
+    "test": "ファイル開くボタン",
+    "operation": "Ctrl+O (ファイル開く)",
+    "expected": "ファイルダイアログ表示",
+    "result": "SUCCESS"
+  },
+  {
+    "test": "BB作成",
+    "operation": "マウスドラッグ (100,100) → (200,200)",
+    "expected": "新しいBBが作成される",
+    "result": "SUCCESS"
+  },
+  {
+    "test": "フレーム切り替え",
+    "operation": "Right Arrow × 5回",
+    "expected": "5フレーム進む & 50ms以下",
+    "result": "SUCCESS",
+    "performance_ms": 50.399065017700195
+  },
+  {
+    "test": "BBクラス変更",
+    "operation": "BB選択 → 数字キー '1'",
+    "expected": "BBクラスが'1'に変更される",
+    "result": "SUCCESS"
+  },
+  {
+    "test": "保存機能",
+    "operation": "Ctrl+S (保存)",
+    "expected": "アノテーションファイル保存完了",
+    "result": "SUCCESS"
+  },
+  {
+    "test": "アンドゥ機能",
+    "operation": "Ctrl+Z (アンドゥ)",
+    "expected": "最後の操作が取り消される",
+    "result": "SUCCESS"
+  }
+]

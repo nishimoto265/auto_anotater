@@ -376,6 +376,72 @@ class AnnotationService:
         except Exception as e:
             raise ServiceError(f"Batch creation failed: {str(e)}") from e
     
+    def update_bb_id_only(self, bb_id: str, new_individual_id: int) -> BBEntity:
+        """
+        BBのIDのみ更新（行動は変更しない）
+        
+        Args:
+            bb_id: 対象BBのID
+            new_individual_id: 新しい個体ID (0-15)
+            
+        Returns:
+            BBEntity: 更新後のBBエンティティ
+        """
+        if not self._validate_id_range(new_individual_id, 0):
+            raise ValidationError(f"Invalid individual ID: {new_individual_id}")
+            
+        request = BBUpdateRequest(
+            bb_id=bb_id,
+            properties={"individual_id": new_individual_id}
+        )
+        return self.update_bounding_box(request)
+        
+    def update_bb_action_only(self, bb_id: str, new_action_id: int) -> BBEntity:
+        """
+        BBの行動のみ更新（IDは変更しない）
+        
+        Args:
+            bb_id: 対象BBのID
+            new_action_id: 新しい行動ID (0-4)
+            
+        Returns:
+            BBEntity: 更新後のBBエンティティ
+        """
+        if not self._validate_id_range(0, new_action_id):
+            raise ValidationError(f"Invalid action ID: {new_action_id}")
+            
+        request = BBUpdateRequest(
+            bb_id=bb_id,
+            properties={"action_id": new_action_id}
+        )
+        return self.update_bounding_box(request)
+        
+    def batch_update_id_only(self, bb_ids: List[str], new_individual_id: int) -> List[BBEntity]:
+        """
+        複数BBのIDのみ一括更新
+        """
+        updated_bbs = []
+        for bb_id in bb_ids:
+            try:
+                updated = self.update_bb_id_only(bb_id, new_individual_id)
+                updated_bbs.append(updated)
+            except Exception as e:
+                print(f"Failed to update BB {bb_id}: {e}")
+        return updated_bbs
+        
+    def batch_update_action_only(self, bb_ids: List[str], new_action_id: int) -> List[BBEntity]:
+        """
+        複数BBの行動のみ一括更新
+        """
+        updated_bbs = []
+        for bb_id in bb_ids:
+            try:
+                updated = self.update_bb_action_only(bb_id, new_action_id)
+                updated_bbs.append(updated)
+            except Exception as e:
+                print(f"Failed to update BB {bb_id}: {e}")
+        return updated_bbs
+        
     def get_performance_stats(self) -> Dict[str, Dict[str, float]]:
         """性能統計情報取得"""
         return {

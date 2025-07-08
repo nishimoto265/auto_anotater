@@ -11,9 +11,9 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
-    "PyQt6>=6.6.0",
+    "pyqt6>=6.6.0",
     "PyOpenGL>=3.1.7",
     "numpy>=1.24.0",
     "pillow>=10.0.0",
@@ -96,4 +96,12 @@ exclude = [
     ".venv",
     ".eggs",
     "*.egg",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
+    "pytest-qt>=4.5.0",
 ]

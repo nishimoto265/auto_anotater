@@ -123,6 +123,18 @@ class BBRenderer:
         self.cache_hits = 0
         self.cache_misses = 0
         
+        # 色モード（'id' or 'action'）
+        self.color_mode = 'id'
+        
+        # 行動別の色定義
+        self.action_colors = {
+            0: QColor(255, 0, 0),      # Sit - Red
+            1: QColor(0, 255, 0),      # Stand - Green
+            2: QColor(0, 0, 255),      # Milk - Blue
+            3: QColor(255, 255, 0),    # Water - Yellow
+            4: QColor(255, 0, 255),    # Food - Magenta
+        }
+        
     def render_bbs(self, bb_list: List[Any], image_width: int, 
                    image_height: int, transform: QTransform) -> float:
         """
@@ -217,6 +229,12 @@ class BBRenderer:
             # ピクセル座標変換
             rect = bb_entity.to_pixel_rect(image_width, image_height)
             
+            # 色モードに応じて色を更新
+            if self.color_mode == 'action':
+                bb_entity.color = self.get_color_for_action(bb_entity.action_id)
+            else:
+                bb_entity.color = self.get_color_for_id(bb_entity.individual_id)
+            
             # グラフィックスアイテム作成（プールから取得またはnew）
             try:
                 item = self.rect_pool.get(bb_entity)
@@ -247,7 +265,19 @@ class BBRenderer:
         """BB描画アイテム更新"""
         rect = bb_entity.to_pixel_rect(image_width, image_height)
         item.setRect(rect)
+        
+        # 色モードに応じて色を更新
+        if self.color_mode == 'action':
+            bb_entity.color = self.get_color_for_action(bb_entity.action_id)
+        else:
+            bb_entity.color = self.get_color_for_id(bb_entity.individual_id)
+            
         item.bb_entity = bb_entity
+        
+        # ペンの色を更新
+        pen = QPen(bb_entity.color, 3)
+        pen.setStyle(Qt.PenStyle.SolidLine)
+        item.setPen(pen)
         
         # ラベル更新（行動名を表示）
         if item.text_item:
@@ -255,6 +285,7 @@ class BBRenderer:
             action_name = action_names.get(bb_entity.action_id, f"Unknown({bb_entity.action_id})")
             label = f"ID:{bb_entity.individual_id} {action_name}"
             item.text_item.setPlainText(label)
+            item.text_item.setDefaultTextColor(bb_entity.color)
             
     def _clear_rendered_items(self):
         """描画アイテムクリア"""
@@ -355,6 +386,17 @@ class BBRenderer:
         # オブジェクトプール最適化
         self.rect_pool.release_all()
         
+    def get_color_for_action(self, action_id: int) -> QColor:
+        """行動ID用色取得"""
+        return self.action_colors.get(action_id, QColor(128, 128, 128))  # デフォルトはグレー
+        
+    def set_color_mode(self, mode: str):
+        """色モード設定"""
+        if mode in ['id', 'action']:
+            self.color_mode = mode
+            # 色キャッシュをクリア（再描画時に新しい色で描画）
+            self.color_cache.clear()
+            
     def get_performance_stats(self) -> Dict[str, Any]:
         """性能統計取得"""
         avg_render_time = (self.total_render_time / self.render_count 
@@ -372,6 +414,7 @@ class BBRenderer:
             'cache_misses': self.cache_misses,
             'rendered_items_count': len(self.rendered_items),
             'dirty_rects_count': len(self.dirty_rects),
+            'color_mode': self.color_mode,
             'target_performance': {
                 'bb_rendering': '16ms以下',
                 'single_bb': '1ms以下',

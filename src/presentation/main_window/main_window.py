@@ -10,7 +10,7 @@ PyQt6 メインウィンドウ・70%:30%レイアウト・高速レスポンス
 
 import os
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
     QSplitter, QFrame, QApplication, QMenuBar, QStatusBar
@@ -25,7 +25,13 @@ from ..control_panels.id_panel import IDPanel
 from ..control_panels.action_panel import ActionPanel
 from ..control_panels.bb_list_panel import BBListPanel
 from ..control_panels.file_list_panel import FileListPanel
+from ..control_panels.color_mode_panel import ColorModePanel
+from ..control_panels.modify_panel import ModifyPanel
+from ..control_panels.continuous_mode_panel import ContinuousModePanel
 from ..shortcuts.keyboard_handler import KeyboardHandler
+
+# 追跡機能用インポート
+from utils.simple_tracker import SimpleTracker
 
 
 class MainWindow(QMainWindow):
@@ -74,6 +80,12 @@ class MainWindow(QMainWindow):
         # アノテーション管理
         self.current_annotations = []  # 現在フレームのBBリスト
         self.annotation_output_dir = None  # アノテーション保存先
+        
+        # 追跡システム初期化
+        self.tracker = SimpleTracker(iou_threshold=0.5)
+            
+        # 前フレームのBB記録（追跡用）
+        self.previous_frame_bbs = []
         
         # プロジェクト初期化
         if self.project_info:
@@ -159,17 +171,42 @@ class MainWindow(QMainWindow):
         # 操作パネル作成
         self.id_panel = IDPanel()
         self.action_panel = ActionPanel()
+        
+        # 新しいパネルを追加
+        from ..control_panels.color_mode_panel import ColorModePanel
+        from ..control_panels.modify_panel import ModifyPanel
+        from ..control_panels.continuous_mode_panel import ContinuousModePanel
+        
+        self.color_mode_panel = ColorModePanel()
+        self.modify_panel = ModifyPanel()
+        self.continuous_mode_panel = ContinuousModePanel()
+        
         self.bb_list_panel = BBListPanel()
         self.file_list_panel = FileListPanel()
         
-        # レイアウト
+        # スクロールエリアを作成してパネルを収納
+        from PyQt6.QtWidgets import QScrollArea
+        scroll_area = QScrollArea()
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout(scroll_widget)
+        
+        # パネルを追加
+        scroll_layout.addWidget(self.id_panel)
+        scroll_layout.addWidget(self.action_panel)
+        scroll_layout.addWidget(self.color_mode_panel)
+        scroll_layout.addWidget(self.modify_panel)
+        scroll_layout.addWidget(self.continuous_mode_panel)
+        scroll_layout.addWidget(self.bb_list_panel)
+        scroll_layout.addWidget(self.file_list_panel)
+        scroll_layout.addStretch()
+        
+        scroll_area.setWidget(scroll_widget)
+        scroll_area.setWidgetResizable(True)
+        
+        # メインレイアウト
         layout = QVBoxLayout(frame)
-        layout.addWidget(self.id_panel)
-        layout.addWidget(self.action_panel)
-        layout.addWidget(self.bb_list_panel, 1)  # 残りの1/3スペース
-        layout.addWidget(self.file_list_panel, 2)  # 残りの2/3スペース
+        layout.addWidget(scroll_area)
         layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(5)
         
         return frame
         
@@ -222,10 +259,26 @@ class MainWindow(QMainWindow):
             'S': self.delete_selected_bb,
             'Ctrl+Z': self.undo_action,
             'Escape': self.cancel_current_action,
+            # 新機能用ショートカット
+            'Shift+W': self.toggle_continuous_mode,
         }
         
+        # ID変更用ショートカット (Alt + 0-9, A-F)
+        for i in range(10):
+            shortcuts[f'Alt+{i}'] = lambda id=i: self.set_selected_bb_id_only(id)
+        shortcuts['Alt+A'] = lambda: self.set_selected_bb_id_only(10)
+        shortcuts['Alt+B'] = lambda: self.set_selected_bb_id_only(11)
+        shortcuts['Alt+C'] = lambda: self.set_selected_bb_id_only(12)
+        shortcuts['Alt+D'] = lambda: self.set_selected_bb_id_only(13)
+        shortcuts['Alt+E'] = lambda: self.set_selected_bb_id_only(14)
+        shortcuts['Alt+F'] = lambda: self.set_selected_bb_id_only(15)
+        
+        # 行動変更用ショートカット (Shift + 1-5)
+        for i in range(5):
+            shortcuts[f'Shift+{i+1}'] = lambda action=i: self.set_selected_bb_action_only(action)
+        
         for key, handler in shortcuts.items():
-            self.keyboard_handler.register_shortcut(key, handler, handler.__name__)
+            self.keyboard_handler.register_shortcut(key, handler, handler.__name__ if hasattr(handler, '__name__') else key)
             
     def connect_signals(self):
         """シグナル・スロット接続"""
@@ -239,6 +292,13 @@ class MainWindow(QMainWindow):
         self.action_panel.action_selected.connect(self.on_action_selected)
         self.bb_list_panel.bb_selected.connect(self.on_bb_list_selected)
         self.file_list_panel.frame_selected.connect(self.on_frame_selected)
+        
+        # 新しいパネルからの信号
+        self.color_mode_panel.color_mode_changed.connect(self.on_color_mode_changed)
+        self.modify_panel.apply_changes.connect(self.on_apply_changes)
+        self.continuous_mode_panel.continuous_mode_changed.connect(self.on_continuous_mode_changed)
+        self.continuous_mode_panel.copy_bb_to_range.connect(self.on_copy_bb_to_range)
+        self.continuous_mode_panel.track_forward.connect(self.on_track_forward)
         
     # ==================== ショートカットハンドラー ====================
     
@@ -346,6 +406,67 @@ class MainWindow(QMainWindow):
         """現在のアクションキャンセル（Escape）"""
         self.bb_canvas.cancel_current_action()
         
+    def toggle_continuous_mode(self):
+        """連続モード切り替え（Shift+W）"""
+        if hasattr(self, 'continuous_mode_panel'):
+            self.continuous_mode_panel.toggle_continuous_mode()
+            
+    def set_selected_bb_id_only(self, individual_id: int):
+        """選択BBのIDのみ変更（Alt+0-9,A-F）"""
+        selected_bb = self.bb_canvas.get_selected_bb()
+        if selected_bb:
+            # current_annotationsを更新
+            for bb in self.current_annotations:
+                if bb['id'] == selected_bb.id:
+                    bb['individual_id'] = individual_id
+                    break
+                    
+            # UI更新
+            self.bb_canvas.update_bounding_boxes(self.current_annotations)
+            self.update_bb_list_panel()
+            self.save_current_annotations()
+            
+            # IDパネルも更新
+            if hasattr(self, 'id_panel'):
+                self.id_panel.set_selected_id(individual_id)
+                
+            self.status_bar.showMessage(f"IDを {individual_id} に変更しました", 2000)
+        else:
+            # 選択されていない場合は、IDパネルの選択を変更
+            if hasattr(self, 'id_panel'):
+                self.id_panel.set_selected_id(individual_id)
+                self.status_bar.showMessage(f"IDを {individual_id} に選択しました", 2000)
+                
+    def set_selected_bb_action_only(self, action_id: int):
+        """選択BBの行動のみ変更（Shift+1-5）"""
+        selected_bb = self.bb_canvas.get_selected_bb()
+        if selected_bb:
+            # current_annotationsを更新
+            for bb in self.current_annotations:
+                if bb['id'] == selected_bb.id:
+                    bb['action_id'] = action_id
+                    break
+                    
+            # UI更新
+            self.bb_canvas.update_bounding_boxes(self.current_annotations)
+            self.update_bb_list_panel()
+            self.save_current_annotations()
+            
+            # 行動パネルも更新
+            if hasattr(self, 'action_panel'):
+                self.action_panel.set_selected_action(action_id)
+                
+            action_names = {0: "Sit", 1: "Stand", 2: "Milk", 3: "Water", 4: "Food"}
+            action_name = action_names.get(action_id, "Unknown")
+            self.status_bar.showMessage(f"行動を {action_name} に変更しました", 2000)
+        else:
+            # 選択されていない場合は、行動パネルの選択を変更
+            if hasattr(self, 'action_panel'):
+                self.action_panel.set_selected_action(action_id)
+                action_names = {0: "Sit", 1: "Stand", 2: "Milk", 3: "Water", 4: "Food"}
+                action_name = action_names.get(action_id, "Unknown")
+                self.status_bar.showMessage(f"行動を {action_name} に選択しました", 2000)
+        
     # ==================== イベントハンドラー ====================
     
     def on_bb_created(self, x: float, y: float, w: float, h: float):
@@ -379,6 +500,10 @@ class MainWindow(QMainWindow):
         
         # ファイルに保存
         self.save_current_annotations()
+        
+        # 連続モードの場合、最後のBBテンプレートを保存
+        if hasattr(self, 'continuous_mode') and self.continuous_mode:
+            self.last_bb_template = bb_entity.copy()
         
         self.bb_creation_requested.emit(x, y, w, h, current_id, current_action)
         
@@ -422,6 +547,43 @@ class MainWindow(QMainWindow):
                 
                 # 現在フレームのアノテーションを読み込み・表示
                 self.load_current_annotations()
+                
+                # 連続モードの場合、最後のBBテンプレートから新しいBBを作成
+                if hasattr(self, 'continuous_mode') and self.continuous_mode and hasattr(self, 'last_bb_template'):
+                    # IOU計算用のインポート
+                    from utils.iou_calculator import has_high_overlap
+                    
+                    # 重複チェック
+                    template_bb = self.last_bb_template
+                    has_overlap, max_iou = has_high_overlap(
+                        template_bb, 
+                        self.current_annotations,
+                        template_bb['individual_id'],
+                        iou_threshold=0.8
+                    )
+                    
+                    if not has_overlap:
+                        # 重複がない場合のみBBを作成（同じ位置・同じIDで）
+                        new_bb = template_bb.copy()
+                        new_bb['id'] = f"bb_{frame_id}_{len(self.current_annotations)}"
+                        
+                        self.current_annotations.append(new_bb)
+                        self.save_current_annotations()
+                        
+                        self.status_bar.showMessage(
+                            f"連続BBを作成しました (ID: {new_bb['individual_id']})", 
+                            2000
+                        )
+                    else:
+                        # 重複がある場合はスキップ
+                        self.status_bar.showMessage(
+                            f"既存BBとの重複のため、BB作成をスキップしました (IOU: {max_iou:.2f})", 
+                            2000
+                        )
+                
+                # 現在のフレームBBを記録（次フレームの追跡用）
+                self.previous_frame_bbs = self.current_annotations.copy()
+                    
                 self.bb_canvas.update_bounding_boxes(self.current_annotations)
                 self.update_bb_list_panel()
                     
@@ -593,6 +755,269 @@ class MainWindow(QMainWindow):
             self.annotation_output_dir = default_dir
             os.makedirs(default_dir, exist_ok=True)
             print(f"Using default annotation directory: {default_dir}")
+            
+    # ==================== 新機能ハンドラー ====================
+    
+    def on_color_mode_changed(self, mode: str):
+        """色分けモード変更処理"""
+        print(f"Color mode changed to: {mode}")
+        
+        # BBレンダラーの色モードを更新
+        if hasattr(self.bb_canvas, 'bb_renderer'):
+            self.bb_canvas.bb_renderer.set_color_mode(mode)
+            
+            # 現在のBBを再描画
+            self.bb_canvas.update_bounding_boxes(self.current_annotations)
+            
+    def on_apply_changes(self, change_id: bool, change_action: bool):
+        """選択BBの属性変更（チェックボックスで選択された属性のみ）"""
+        selected_bb = self.bb_canvas.get_selected_bb()
+        if selected_bb is None:
+            self.status_bar.showMessage("BBが選択されていません", 2000)
+            return
+            
+        # 変更メッセージ用リスト
+        changes = []
+        
+        # 選択BBのデータを更新
+        for bb in self.current_annotations:
+            if bb['id'] == selected_bb.id:
+                # IDの変更
+                if change_id:
+                    current_id = self.id_panel.get_selected_id()
+                    if current_id is not None:
+                        bb['individual_id'] = current_id
+                        changes.append(f"ID: {current_id}")
+                
+                # 行動の変更
+                if change_action:
+                    current_action = self.action_panel.get_selected_action()
+                    if current_action is not None:
+                        bb['action_id'] = current_action
+                        action_names = {0: "Sit", 1: "Stand", 2: "Milk", 3: "Water", 4: "Food"}
+                        action_name = action_names.get(current_action, "Unknown")
+                        changes.append(f"行動: {action_name}")
+                break
+                
+        # 変更がある場合は再描画
+        if changes:
+            self.bb_canvas.update_bounding_boxes(self.current_annotations)
+            self.update_bb_list_panel()
+            self.save_current_annotations()
+            self.status_bar.showMessage(f"変更: {', '.join(changes)}", 2000)
+        else:
+            self.status_bar.showMessage("変更する属性が選択されていません", 2000)
+        
+    def on_continuous_mode_changed(self, enabled: bool):
+        """連続モード変更処理"""
+        self.continuous_mode = enabled
+        status = "ON" if enabled else "OFF"
+        self.status_bar.showMessage(f"連続生成モード: {status}", 2000)
+        
+        # 連続モード用の最後のBBを記録
+        if enabled and self.current_annotations:
+            self.last_bb_template = self.current_annotations[-1].copy()
+            
+    def on_copy_bb_to_range(self, start_frame: int, end_frame: int):
+        """BBを指定範囲にコピー"""
+        if not hasattr(self, 'selected_bb') or self.selected_bb is None:
+            self.status_bar.showMessage("BBが選択されていません", 2000)
+            return
+            
+        # 選択BBを取得
+        selected_bb_data = None
+        for bb in self.current_annotations:
+            if bb['id'] == self.selected_bb.id:
+                selected_bb_data = bb.copy()
+                break
+                
+        if not selected_bb_data:
+            return
+            
+        # 範囲内の各フレームにコピー
+        copied_count = 0
+        for frame_num in range(start_frame, end_frame + 1):
+            if frame_num == self.current_frame:
+                continue  # 現在フレームはスキップ
+                
+            # フレームのアノテーションファイルパス
+            frame_id = f"{frame_num:06d}"
+            annotation_file = os.path.join(self.annotation_output_dir, f"{frame_id}.txt")
+            
+            # 既存のアノテーションを読み込み
+            existing_annotations = []
+            if os.path.exists(annotation_file):
+                try:
+                    from persistence.file_io.txt_handler import YOLOTxtHandler
+                    handler = YOLOTxtHandler()
+                    existing_bbs = handler.load_annotations(frame_id, self.annotation_output_dir)
+                    for bb in existing_bbs:
+                        existing_annotations.append({
+                            'id': bb.id,
+                            'x': bb.coordinates.x,
+                            'y': bb.coordinates.y,
+                            'w': bb.coordinates.w,
+                            'h': bb.coordinates.h,
+                            'individual_id': bb.individual_id,
+                            'action_id': bb.action_id,
+                            'confidence': bb.confidence
+                        })
+                except Exception as e:
+                    print(f"Error loading annotations for frame {frame_id}: {e}")
+                    
+            # IOU計算用のインポート
+            from utils.iou_calculator import has_high_overlap
+            
+            # 重複チェック
+            has_overlap, max_iou = has_high_overlap(
+                selected_bb_data,
+                existing_annotations,
+                selected_bb_data['individual_id'],
+                iou_threshold=0.8
+            )
+            
+            if not has_overlap:
+                # 新しいBBを追加
+                new_bb = selected_bb_data.copy()
+                new_bb['id'] = f"bb_{frame_id}_{len(existing_annotations)}"
+                existing_annotations.append(new_bb)
+                
+                # 保存
+                self.save_annotations_to_file(frame_id, existing_annotations)
+                copied_count += 1
+            else:
+                print(f"Frame {frame_id}: Skipped due to overlap (IOU: {max_iou:.2f})")
+            
+        self.status_bar.showMessage(f"{copied_count}フレームにBBをコピーしました", 3000)
+        
+    def on_track_forward(self):
+        """追跡での連続ID付（既存BBのIDを変更）"""
+        selected_bb = self.bb_canvas.get_selected_bb()
+        if not selected_bb:
+            self.status_bar.showMessage("BBが選択されていません", 2000)
+            return
+            
+        # 選択BBのデータを取得
+        selected_bb_data = None
+        for bb in self.current_annotations:
+            if bb['id'] == selected_bb.id:
+                selected_bb_data = bb.copy()
+                break
+                
+        if not selected_bb_data:
+            return
+            
+        # 追跡実行（デフォルト30フレーム）
+        num_frames = 30
+        tracked_count = 0
+        lost_at_frame = None
+        modified_frames = []
+        
+        current_bb = selected_bb_data
+        target_id = selected_bb_data['individual_id']  # 付けるID
+        
+        for i in range(1, num_frames + 1):
+            next_frame = self.current_frame + i
+            if next_frame >= self.total_frames:
+                break
+                
+            # 次フレームのアノテーションを読み込み
+            frame_id = f"{next_frame:06d}"
+            annotation_file = os.path.join(self.annotation_output_dir, f"{frame_id}.txt")
+            
+            # 既存のアノテーションを読み込み
+            existing_annotations = []
+            if os.path.exists(annotation_file):
+                try:
+                    from persistence.file_io.txt_handler import YOLOTxtHandler
+                    handler = YOLOTxtHandler()
+                    existing_bbs = handler.load_annotations(frame_id, self.annotation_output_dir)
+                    for bb in existing_bbs:
+                        existing_annotations.append({
+                            'id': bb.id,
+                            'x': bb.coordinates.x,
+                            'y': bb.coordinates.y,
+                            'w': bb.coordinates.w,
+                            'h': bb.coordinates.h,
+                            'individual_id': bb.individual_id,
+                            'action_id': bb.action_id,
+                            'confidence': bb.confidence
+                        })
+                except Exception as e:
+                    print(f"Error loading annotations for frame {frame_id}: {e}")
+                    
+            if not existing_annotations:
+                # BBがないフレームでは追跡終了
+                lost_at_frame = next_frame
+                break
+                
+            # 追跡によるマッチング
+            best_match, best_iou = self.tracker.find_best_match(current_bb, existing_annotations)
+            
+            if best_match and best_iou > 0.3:  # 追跡用の低めの閾値
+                # マッチしたBBのIDを変更
+                original_id = best_match['individual_id']
+                best_match['individual_id'] = target_id
+                
+                # アノテーションを更新して保存
+                self.save_annotations_to_file(frame_id, existing_annotations)
+                
+                # 次の追跡用に現在BBを更新
+                current_bb = best_match
+                tracked_count += 1
+                modified_frames.append(next_frame)
+                
+                print(f"Frame {frame_id}: Changed ID from {original_id} to {target_id} (IOU: {best_iou:.2f})")
+            else:
+                # 追跡断絶
+                lost_at_frame = next_frame
+                break
+                
+        # 結果をステータスバーに表示
+        if lost_at_frame:
+            self.status_bar.showMessage(
+                f"追跡でID {target_id} を{tracked_count}フレームの既存BBに付けました。フレーム{lost_at_frame}で追跡断絶", 
+                3000
+            )
+        else:
+            self.status_bar.showMessage(
+                f"追跡でID {target_id} を{tracked_count}フレームの既存BBに付けました", 
+                3000
+            )
+        
+    def save_annotations_to_file(self, frame_id: str, annotations: list):
+        """アノテーションをファイルに保存"""
+        try:
+            from persistence.file_io.txt_handler import YOLOTxtHandler, BBEntity, Coordinates
+            from datetime import datetime
+            
+            handler = YOLOTxtHandler()
+            
+            # BBエンティティに変換
+            bb_entities = []
+            for bb_data in annotations:
+                bb_entity = BBEntity(
+                    id=bb_data['id'],
+                    frame_id=frame_id,
+                    individual_id=bb_data['individual_id'],
+                    action_id=bb_data['action_id'],
+                    coordinates=Coordinates(
+                        x=bb_data['x'],
+                        y=bb_data['y'],
+                        w=bb_data['w'],
+                        h=bb_data['h']
+                    ),
+                    confidence=bb_data['confidence'],
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+                bb_entities.append(bb_entity)
+            
+            # 保存実行
+            handler.save_annotations(frame_id, bb_entities, self.annotation_output_dir)
+            
+        except Exception as e:
+            print(f"Error saving annotations: {e}")
         
     def update_status(self, message: str):
         """ステータス更新"""

@@ -103,6 +103,31 @@ class KeyboardHandler(QObject):
         'F': {'name': 'fit_view', 'target_time': 100.0},
         '+': {'name': 'zoom_in', 'target_time': 50.0},
         '-': {'name': 'zoom_out', 'target_time': 50.0},
+        # 新機能用ショートカット
+        'Shift+W': {'name': 'toggle_continuous_mode', 'target_time': 1.0},
+        # ID変更用 (Alt + 0-9, A-F)
+        'Alt+0': {'name': 'set_id_0', 'target_time': 1.0},
+        'Alt+1': {'name': 'set_id_1', 'target_time': 1.0},
+        'Alt+2': {'name': 'set_id_2', 'target_time': 1.0},
+        'Alt+3': {'name': 'set_id_3', 'target_time': 1.0},
+        'Alt+4': {'name': 'set_id_4', 'target_time': 1.0},
+        'Alt+5': {'name': 'set_id_5', 'target_time': 1.0},
+        'Alt+6': {'name': 'set_id_6', 'target_time': 1.0},
+        'Alt+7': {'name': 'set_id_7', 'target_time': 1.0},
+        'Alt+8': {'name': 'set_id_8', 'target_time': 1.0},
+        'Alt+9': {'name': 'set_id_9', 'target_time': 1.0},
+        'Alt+A': {'name': 'set_id_10', 'target_time': 1.0},
+        'Alt+B': {'name': 'set_id_11', 'target_time': 1.0},
+        'Alt+C': {'name': 'set_id_12', 'target_time': 1.0},
+        'Alt+D': {'name': 'set_id_13', 'target_time': 1.0},
+        'Alt+E': {'name': 'set_id_14', 'target_time': 1.0},
+        'Alt+F': {'name': 'set_id_15', 'target_time': 1.0},
+        # 行動変更用 (Shift + 1-5)
+        'Shift+1': {'name': 'set_action_0', 'target_time': 1.0},
+        'Shift+2': {'name': 'set_action_1', 'target_time': 1.0},
+        'Shift+3': {'name': 'set_action_2', 'target_time': 1.0},
+        'Shift+4': {'name': 'set_action_3', 'target_time': 1.0},
+        'Shift+5': {'name': 'set_action_4', 'target_time': 1.0},
     }
     
     def __init__(self, parent: Optional[QWidget] = None):
@@ -235,26 +260,55 @@ class KeyboardHandler(QObject):
         # メインキー処理
         if key == Qt.Key.Key_A:
             parts.append("A")
+        elif key == Qt.Key.Key_B:
+            parts.append("B")
+        elif key == Qt.Key.Key_C:
+            parts.append("C")
         elif key == Qt.Key.Key_D:
             parts.append("D")
+        elif key == Qt.Key.Key_E:
+            parts.append("E")
+        elif key == Qt.Key.Key_F:
+            parts.append("F")
         elif key == Qt.Key.Key_W:
             parts.append("W")
         elif key == Qt.Key.Key_S:
             parts.append("S")
         elif key == Qt.Key.Key_Z:
             parts.append("Z")
+        elif key == Qt.Key.Key_0:
+            parts.append("0")
+        elif key == Qt.Key.Key_1:
+            parts.append("1")
+        elif key == Qt.Key.Key_2:
+            parts.append("2")
+        elif key == Qt.Key.Key_3:
+            parts.append("3")
+        elif key == Qt.Key.Key_4:
+            parts.append("4")
+        elif key == Qt.Key.Key_5:
+            parts.append("5")
+        elif key == Qt.Key.Key_6:
+            parts.append("6")
+        elif key == Qt.Key.Key_7:
+            parts.append("7")
+        elif key == Qt.Key.Key_8:
+            parts.append("8")
+        elif key == Qt.Key.Key_9:
+            parts.append("9")
         elif key == Qt.Key.Key_Escape:
             parts.append("Escape")
         elif key == Qt.Key.Key_Space:
             parts.append("Space")
-        elif key == Qt.Key.Key_F:
-            parts.append("F")
         elif key == Qt.Key.Key_Plus:
             parts.append("+")
         elif key == Qt.Key.Key_Minus:
             parts.append("-")
         else:
-            parts.append(key_event.text().upper())
+            # その他のキーはテキストから取得
+            text = key_event.text().upper()
+            if text:
+                parts.append(text)
             
         return "+".join(parts)
         
