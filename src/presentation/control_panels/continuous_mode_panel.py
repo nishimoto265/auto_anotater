@@ -4,8 +4,7 @@
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-    QLabel, QGroupBox, QCheckBox, QSpinBox
+    QWidget, QVBoxLayout, QLabel, QGroupBox, QCheckBox
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QFont
@@ -19,13 +18,10 @@ class ContinuousModePanel(QWidget):
     - 連続モードのON/OFF
     - 最後に作成したBBの位置を記憶
     - フレーム切り替え時に同じ位置にBB自動生成
-    - 範囲指定でBBをコピー
     """
     
     # シグナル定義
     continuous_mode_changed = pyqtSignal(bool)  # 連続モード変更
-    copy_bb_to_range = pyqtSignal(int, int)  # 開始フレーム, 終了フレーム
-    track_forward = pyqtSignal()  # 前方追跡
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -56,53 +52,23 @@ class ContinuousModePanel(QWidget):
         font.setBold(True)
         self.status_label.setFont(font)
         
-        # BBコピー範囲設定
-        copy_group = QGroupBox("BBを範囲コピー")
-        copy_layout = QVBoxLayout(copy_group)
-        
-        range_layout = QHBoxLayout()
-        range_layout.addWidget(QLabel("開始:"))
-        self.start_frame_spin = QSpinBox()
-        self.start_frame_spin.setMinimum(0)
-        self.start_frame_spin.setMaximum(99999)
-        range_layout.addWidget(self.start_frame_spin)
-        
-        range_layout.addWidget(QLabel("終了:"))
-        self.end_frame_spin = QSpinBox()
-        self.end_frame_spin.setMinimum(0)
-        self.end_frame_spin.setMaximum(99999)
-        range_layout.addWidget(self.end_frame_spin)
-        
-        copy_layout.addLayout(range_layout)
-        
-        self.copy_range_btn = QPushButton("選択BBを範囲にコピー")
-        self.copy_range_btn.setToolTip(
-            "現在選択中のBBを指定範囲の\n"
-            "全フレームにコピーします"
+        # 説明ラベル
+        desc_label = QLabel(
+            "有効時: BBを作成すると、次のフレームでも\n"
+            "同じ位置に同じBBが自動生成されます"
         )
-        self.copy_range_btn.setEnabled(False)
-        copy_layout.addWidget(self.copy_range_btn)
-        
-        # 追跡でID付ボタン
-        self.track_forward_btn = QPushButton("追跡でID付")
-        self.track_forward_btn.setToolTip(
-            "選択したBBを後続フレームで追跡し、\n"
-            "追跡が途切れるまで同じIDを付けます"
-        )
-        self.track_forward_btn.setEnabled(False)
+        desc_label.setWordWrap(True)
+        desc_label.setStyleSheet("color: #666; font-size: 10px;")
         
         # レイアウトに追加
         group_layout.addWidget(self.continuous_check)
         group_layout.addWidget(self.status_label)
-        group_layout.addWidget(copy_group)
-        group_layout.addWidget(self.track_forward_btn)
+        group_layout.addWidget(desc_label)
         
         layout.addWidget(group)
         
         # シグナル接続
         self.continuous_check.stateChanged.connect(self.on_continuous_mode_changed)
-        self.copy_range_btn.clicked.connect(self.on_copy_range_clicked)
-        self.track_forward_btn.clicked.connect(self.track_forward.emit)
         
     def on_continuous_mode_changed(self, state):
         """連続モード変更処理"""
@@ -117,25 +83,6 @@ class ContinuousModePanel(QWidget):
             
         self.continuous_mode_changed.emit(self.continuous_mode)
         
-    def on_copy_range_clicked(self):
-        """範囲コピーボタンクリック"""
-        start = self.start_frame_spin.value()
-        end = self.end_frame_spin.value()
-        
-        if start <= end:
-            self.copy_bb_to_range.emit(start, end)
-        
-    def set_frame_range(self, current: int, total: int):
-        """フレーム範囲設定"""
-        self.start_frame_spin.setMaximum(total - 1)
-        self.end_frame_spin.setMaximum(total - 1)
-        self.start_frame_spin.setValue(current)
-        self.end_frame_spin.setValue(min(current + 10, total - 1))
-        
-    def set_selection_state(self, has_selection: bool):
-        """選択状態に応じてボタンを有効/無効化"""
-        self.copy_range_btn.setEnabled(has_selection)
-        self.track_forward_btn.setEnabled(has_selection)
         
     def toggle_continuous_mode(self):
         """連続モード切り替え（ショートカット用）"""

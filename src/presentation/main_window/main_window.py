@@ -28,6 +28,8 @@ from ..control_panels.file_list_panel import FileListPanel
 from ..control_panels.color_mode_panel import ColorModePanel
 from ..control_panels.modify_panel import ModifyPanel
 from ..control_panels.continuous_mode_panel import ContinuousModePanel
+from ..control_panels.bb_copy_panel import BBCopyPanel
+from ..control_panels.bb_tracking_panel import BBTrackingPanel
 from ..shortcuts.keyboard_handler import KeyboardHandler
 
 # 追跡機能用インポート
@@ -180,6 +182,8 @@ class MainWindow(QMainWindow):
         self.color_mode_panel = ColorModePanel()
         self.modify_panel = ModifyPanel()
         self.continuous_mode_panel = ContinuousModePanel()
+        self.bb_copy_panel = BBCopyPanel()
+        self.bb_tracking_panel = BBTrackingPanel()
         
         self.bb_list_panel = BBListPanel()
         self.file_list_panel = FileListPanel()
@@ -196,6 +200,8 @@ class MainWindow(QMainWindow):
         scroll_layout.addWidget(self.color_mode_panel)
         scroll_layout.addWidget(self.modify_panel)
         scroll_layout.addWidget(self.continuous_mode_panel)
+        scroll_layout.addWidget(self.bb_copy_panel)
+        scroll_layout.addWidget(self.bb_tracking_panel)
         scroll_layout.addWidget(self.bb_list_panel)
         scroll_layout.addWidget(self.file_list_panel)
         scroll_layout.addStretch()
@@ -297,8 +303,8 @@ class MainWindow(QMainWindow):
         self.color_mode_panel.color_mode_changed.connect(self.on_color_mode_changed)
         self.modify_panel.apply_changes.connect(self.on_apply_changes)
         self.continuous_mode_panel.continuous_mode_changed.connect(self.on_continuous_mode_changed)
-        self.continuous_mode_panel.copy_bb_to_range.connect(self.on_copy_bb_to_range)
-        self.continuous_mode_panel.track_forward.connect(self.on_track_forward)
+        self.bb_copy_panel.copy_bb_to_range.connect(self.on_copy_bb_to_range)
+        self.bb_tracking_panel.track_forward.connect(self.on_track_forward)
         
     # ==================== ショートカットハンドラー ====================
     
@@ -372,6 +378,8 @@ class MainWindow(QMainWindow):
             # ファイルに保存
             self.save_current_annotations()
             self.bb_deletion_requested.emit(selected_bb.id)
+            # ボタン状態を更新（BBが削除されたため）
+            self.update_button_states(False)
         else:
             print("No BB selected for deletion")
             # 代替案: 最新のBBを削除
@@ -513,6 +521,20 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'bb_list_panel'):
             self.bb_list_panel.select_bb(bb_id)
         
+        # 選択されたBBを記録
+        selected_bb = self.bb_canvas.get_selected_bb()
+        if selected_bb:
+            self.selected_bb = selected_bb
+            # ボタン状態を更新
+            self.update_button_states(True)
+        
+    def update_button_states(self, has_selection: bool):
+        """BBコピーパネルと追跡パネルのボタン状態を更新"""
+        if hasattr(self, 'bb_copy_panel'):
+            self.bb_copy_panel.set_selection_state(has_selection)
+        if hasattr(self, 'bb_tracking_panel'):
+            self.bb_tracking_panel.set_selection_state(has_selection)
+        
     def on_zoom_changed(self, zoom_level: float):
         """ズーム変更時の処理"""
         self.status_bar.showMessage(f"Zoom: {zoom_level:.1f}x")
@@ -590,6 +612,14 @@ class MainWindow(QMainWindow):
                 # ステータス更新
                 annotation_count = len(self.current_annotations)
                 self.update_status(f"Frame: {self.current_frame + 1}/{self.total_frames} | BBs: {annotation_count}")
+                
+                # フレームが変わったらボタン状態をリセット
+                self.selected_bb = None
+                self.update_button_states(False)
+                
+                # BBコピーパネルのフレーム範囲を更新
+                if hasattr(self, 'bb_copy_panel') and hasattr(self, 'total_frames'):
+                    self.bb_copy_panel.set_frame_range(self.current_frame, self.total_frames)
             else:
                 print(f"Failed to load frame: {frame_path}")
         
@@ -820,14 +850,15 @@ class MainWindow(QMainWindow):
             
     def on_copy_bb_to_range(self, start_frame: int, end_frame: int):
         """BBを指定範囲にコピー"""
-        if not hasattr(self, 'selected_bb') or self.selected_bb is None:
+        selected_bb = self.bb_canvas.get_selected_bb()
+        if not selected_bb:
             self.status_bar.showMessage("BBが選択されていません", 2000)
             return
             
         # 選択BBを取得
         selected_bb_data = None
         for bb in self.current_annotations:
-            if bb['id'] == self.selected_bb.id:
+            if bb['id'] == selected_bb.id:
                 selected_bb_data = bb.copy()
                 break
                 
@@ -890,7 +921,7 @@ class MainWindow(QMainWindow):
             
         self.status_bar.showMessage(f"{copied_count}フレームにBBをコピーしました", 3000)
         
-    def on_track_forward(self):
+    def on_track_forward(self, max_frames: int = 30):
         """追跡での連続ID付（既存BBのIDを変更）"""
         selected_bb = self.bb_canvas.get_selected_bb()
         if not selected_bb:
@@ -907,8 +938,8 @@ class MainWindow(QMainWindow):
         if not selected_bb_data:
             return
             
-        # 追跡実行（デフォルト30フレーム）
-        num_frames = 30
+        # 追跡実行
+        num_frames = max_frames
         tracked_count = 0
         lost_at_frame = None
         modified_frames = []
